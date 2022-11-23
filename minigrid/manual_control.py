@@ -26,6 +26,13 @@ def step(env, window, action):
     obs, reward, terminated, truncated, info = env.step(action)
     print(f"step={env.step_count}, reward={reward:.2f}")
 
+    #obs => image = tableau de 7x7x3 contenant des entiers représentant les object vu par l'agent
+    #obs => direction = de 0 à 3 sachant que 0 = droite, 1 = bas, 2 = gauche, 3 = haut
+    #terminated = boolean qui passe à vrai lorsque l'agent tombe dans la lave ou sur la sortie
+    #truncated = boolean qui passe à vrai lorsque step_count >= max_step_count
+
+    print(f"obs : image={obs['image']}, direction={obs['direction']},mission={obs['mission']}")
+
     if terminated:
         print("terminated!")
         reset(env, window)
