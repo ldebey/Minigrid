@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import matplotlib
+import pandas as pd
 
+matplotlib.use('TkAgg')
 import gymnasium as gym
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper
+from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, FullyObsWrapper
 
 
 def redraw(window, img):
@@ -32,6 +35,7 @@ def step(env, window, action):
     #truncated = boolean qui passe à vrai lorsque step_count >= max_step_count
 
     print(f"obs : image={obs['image']}, direction={obs['direction']},mission={obs['mission']}")
+
 
     if terminated:
         print("terminated!")
@@ -111,6 +115,8 @@ if __name__ == "__main__":
         tile_size=args.tile_size,
     )
 
+    env = FullyObsWrapper(env)
+    env = DictObservationSpaceWrapper(env)
     if args.agent_view:
         env = RGBImgPartialObsWrapper(env)
         env = ImgObsWrapper(env)
