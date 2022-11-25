@@ -398,7 +398,7 @@ class FlatObsWrapper(ObservationWrapper):
         # Cache the last-encoded mission string
         if mission != self.cachedStr:
             assert (
-                len(mission) <= self.maxStrLen
+                    len(mission) <= self.maxStrLen
             ), f"mission string too long ({len(mission)} chars)"
             mission = mission.lower()
 
@@ -529,7 +529,6 @@ class SymbolicObsWrapper(ObservationWrapper):
         return obs
 
 
-
 # Q - Table Rewards
 
 class QTableRewardBonus(gym.Wrapper):
@@ -552,7 +551,6 @@ class QTableRewardBonus(gym.Wrapper):
                     self.q_table[((x, y), direction)][env.actions.left] = 0
                     self.q_table[((x, y), direction)][env.actions.right] = 0
                     self.q_table[((x, y), direction)][env.actions.forward] = 0
-                        
 
     # Choisit entre l'exploration aléatoire et l'exploitation selon une probabilité epsilon
 
@@ -579,13 +577,67 @@ class QTableRewardBonus(gym.Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
         new_pos = (tuple(env.agent_pos), env.agent_dir)
-        
+
         # Q-Learning
         self.q_table[old_pos][(action)] = self.q_table[old_pos][(action)] + self.alpha * (
-            reward + self.gamma * np.max(self.q_table[new_pos][(action)]) - self.q_table[old_pos][(action)]
+                reward + self.gamma * np.max(self.q_table[new_pos][(action)]) - self.q_table[old_pos][(action)]
         )
 
         return obs, reward, terminated, truncated, info
-    
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+
+class RewardWrapper(Wrapper):
+    """
+    Calculates the reward for the agent.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.counts = {}
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        agent_pos = self.env.agent_pos
+        image_object = obs["image"][:, :, 0]
+        mission_pos = np.where(image_object == 8)
+        if mission_pos[0].shape[0] != 0 and mission_pos[1].shape[0] != 0:
+            mission_pos = (mission_pos[0][0], mission_pos[1][0])
+            dist = math.dist(agent_pos, mission_pos)
+            # print(f"a: {agent_pos}, m: {mission_pos}, dist: {dist}, direction: {obs['direction']}")
+            reward = 0.5 / dist
+            match obs['direction']:
+                case 0:
+                    if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
+                        reward += 0.5
+                    else:
+                        if agent_pos[0] < mission_pos[0]:
+                            reward += 0.25
+                case 1:
+                    if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
+                        reward += 0.5
+                    else:
+                        if agent_pos[1] < mission_pos[1]:
+                            reward += 0.25
+                case 2:
+                    if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
+                        reward += 0.5
+                    else:
+                        if agent_pos[0] > mission_pos[0]:
+                            reward += 0.25
+                case 3:
+                    if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
+                        reward += 0.5
+                    else:
+                        if agent_pos[1] > mission_pos[1]:
+                            reward += 0.25
+            if reward == 1:
+                reward = 0.99
+            return obs, reward, terminated, truncated, info
+        else:
+            return obs, 1, terminated, truncated, info
+
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
