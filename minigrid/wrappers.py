@@ -539,7 +539,7 @@ class QTableRewardBonus(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         # Pourcentage d'exploration
-        self.epsilon = 0.1
+        self.epsilon = 0.3
         self.alpha = 0.1
         self.gamma = 0.9
         self.q_table = {}

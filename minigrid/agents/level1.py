@@ -8,7 +8,7 @@ matplotlib.use('TkAgg')
 import gymnasium as gym
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import ActionBonus ,QTableRewardBonus, FullyObsWrapper
+from minigrid.wrappers import RewardWrapper ,QTableRewardBonus, FullyObsWrapper
 
 
 def redraw(window, img):
@@ -81,10 +81,13 @@ def step(env, window):
 #             terminated = step(env, window, env.actions.forward)
 
 def start_learning(env,window):
-    terminated = False
-    truncated = False
-    while not terminated and not truncated:
-        terminated, truncated = step(env,window)
+    env.epsilon = 1
+    for i in range(10):
+        terminated = False
+        truncated = False
+        while not terminated and not truncated:
+            terminated, truncated = step(env,window)
+        env.epsilon -= 0.1
     env.show_q_table()
 
 def key_handler(env, window, event):
@@ -101,7 +104,7 @@ if __name__ == "__main__":
     env = gym.make("MiniGrid-Empty-8x8-v0")
 
     env = FullyObsWrapper(env)
-    env = ActionBonus(env)
+    env = RewardWrapper(env)
     env = QTableRewardBonus(env)
 
     window = Window("Level 1")
