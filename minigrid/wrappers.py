@@ -1,6 +1,7 @@
 import math
 import operator
 from functools import reduce
+import random
 
 import gymnasium as gym
 import numpy as np
@@ -47,6 +48,7 @@ class ActionBonus(gym.Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
         env = self.unwrapped
+        print(env.agent_dir)
         tup = (tuple(env.agent_pos), env.agent_dir, action)
 
         # Get the count for this (s,a) pair
@@ -525,3 +527,65 @@ class SymbolicObsWrapper(ObservationWrapper):
         grid = np.transpose(grid, (1, 2, 0))
         obs["image"] = grid
         return obs
+
+
+
+# Q - Table Rewards
+
+class QTableRewardBonus(gym.Wrapper):
+    """
+    Wrapper which adds a bonus reward for the agent reaching the goal.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        # Pourcentage d'exploration
+        self.epsilon = 0.1
+        self.alpha = 0.1
+        self.gamma = 0.9
+        self.q_table = {}
+        for x in range(env.grid.height):
+            for y in range(env.grid.width):
+                for direction in range(4):
+                    self.q_table[((x, y), direction)] = {}
+
+                    self.q_table[((x, y), direction)][env.actions.left] = 0
+                    self.q_table[((x, y), direction)][env.actions.right] = 0
+                    self.q_table[((x, y), direction)][env.actions.forward] = 0
+                        
+
+    # Choisit entre l'exploration aléatoire et l'exploitation selon une probabilité epsilon
+
+    def take_action(self, state, Q):
+        if random.uniform(0, 1) < self.epsilon:
+            choice = random.randint(0, 2)
+            if choice == 0:
+                return self.unwrapped.actions.left
+            elif choice == 1:
+                return self.unwrapped.actions.right
+            elif choice == 2:
+                return self.unwrapped.actions.forward
+        else:
+            return max(Q[state], key=Q[state].get)
+
+    def show_q_table(self):
+        print(self.q_table)
+
+    def step(self):
+        env = self.unwrapped
+        old_pos = (tuple(env.agent_pos), env.agent_dir)
+        action = self.take_action(old_pos, self.q_table)
+
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        new_pos = (tuple(env.agent_pos), env.agent_dir)
+        
+        # Q-Learning
+        self.q_table[old_pos][(action)] = self.q_table[old_pos][(action)] + self.alpha * (
+            reward + self.gamma * np.max(self.q_table[new_pos][(action)]) - self.q_table[old_pos][(action)]
+        )
+
+        return obs, reward, terminated, truncated, info
+    
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
