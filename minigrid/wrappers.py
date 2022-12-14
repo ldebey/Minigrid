@@ -618,24 +618,32 @@ class RewardWrapper(Wrapper):
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
+                    if image_object[agent_pos[0] + 1, agent_pos[1]] == 0:
+                        reward /= 2
                 case 1:
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.5
                     else:
                         if agent_pos[1] < mission_pos[1]:
                             reward += 0.25
+                    if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
+                        reward /= 2
                 case 2:
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.5
                     else:
                         if agent_pos[0] > mission_pos[0]:
                             reward += 0.25
+                    if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
+                        reward /= 2
                 case 3:
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.5
                     else:
                         if agent_pos[1] > mission_pos[1]:
                             reward += 0.25
+                    if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
+                        reward /= 2
             if reward == 1:
                 reward = 0.99
             return obs, reward, terminated, truncated, info
