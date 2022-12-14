@@ -612,36 +612,36 @@ class RewardWrapper(Wrapper):
             # print(f"a: {agent_pos}, m: {mission_pos}, dist: {dist}, direction: {obs['direction']}")
             reward = 0.5 / dist
             match obs['direction']:
-                case 0:
+                case 0:  # right
                     if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
-                        reward += 0.5
+                        reward += 0.25 + 0.25 / (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
                     if image_object[agent_pos[0] + 1, agent_pos[1]] == 0:
                         reward /= 2
-                case 1:
+                case 1:  # down
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
-                        reward += 0.5
+                        reward += 0.25 + 0.25 / (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] < mission_pos[1]:
-                            reward += 0.25
+                            reward += 0.25 / (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
                         reward /= 2
-                case 2:
+                case 2:  # left
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
-                        reward += 0.5
+                        reward += 0.25 + 0.25 / (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] > mission_pos[0]:
-                            reward += 0.25
+                            reward += 0.25 / (abs(agent_pos[0] - mission_pos[0]))
                     if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
                         reward /= 2
-                case 3:
+                case 3:  # up
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
-                        reward += 0.5
+                        reward += 0.25 + 0.25 / (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] > mission_pos[1]:
-                            reward += 0.25
+                            reward += 0.25 / (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
                         reward /= 2
             if reward == 1:
