@@ -42,6 +42,19 @@ def step(env, window):
 
     return terminated, truncated
 
+def step_learning(env, window):
+    obs, reward, terminated, truncated, info = env.step()
+    #print(reward)
+
+    if terminated:
+        #print("terminated!")
+        reset(env, window)
+    elif truncated:
+        #print("truncated!")
+        reset(env, window)
+
+    return terminated, truncated
+
 
 # def step(env, window, action):
 #     obs, reward, terminated, truncated, info = env.step(action)
@@ -81,22 +94,29 @@ def step(env, window):
 #             terminated = step(env, window, env.actions.forward)
 
 def start_learning(env,window):
-    env.epsilon = 1
-    while env.epsilon > 0:
-        print("epsilon = ",env.epsilon)
+    env.epsilon = 0.5
+    for i in range(200):
+        #print("epsilon = ",env.epsilon)
         terminated = False
         truncated = False
         while not terminated and not truncated:
-            terminated, truncated = step(env,window)
-        env.epsilon -= 0.01
-    env.show_q_table()
+            terminated, truncated = step_learning(env,window)
+    print("=====================================")
+    print("Entrainement terminé")
+
+def start_exploiting(env,window):
+    env.epsilon = 0.1
+    terminated = False
+    truncated = False
+    while not terminated and not truncated:
+        terminated, truncated = step(env,window)
 
 def key_handler(env, window, event):
     print("pressed", event.key)
 
     # Spacebar
     if event.key == " ":
-        start_learning(env,window)
+        start_exploiting(env,window)
         return
 
 
@@ -112,6 +132,8 @@ if __name__ == "__main__":
     window.reg_key_handler(lambda event: key_handler(env, window, event))
 
     reset(env, window)
+
+    start_learning(env,window)
 
     # Blocking event loop
     window.show(block=True)
