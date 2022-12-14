@@ -569,6 +569,9 @@ class QTableRewardBonus(gym.Wrapper):
     def show_q_table(self):
         print(self.q_table)
 
+    def set_q_table(self, q_table):
+        self.q_table = q_table
+
     def step(self):
         env = self.unwrapped
         old_pos = (tuple(env.agent_pos), env.agent_dir)

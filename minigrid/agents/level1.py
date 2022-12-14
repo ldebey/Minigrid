@@ -28,7 +28,7 @@ def reset(env, window, seed=None):
 
 def step(env, window):
     obs, reward, terminated, truncated, info = env.step()
-    print(reward)
+    #print(reward)
 
     if terminated:
         print("terminated!")
@@ -82,12 +82,13 @@ def step(env, window):
 
 def start_learning(env,window):
     env.epsilon = 1
-    for i in range(10):
+    while env.epsilon > 0:
+        print("epsilon = ",env.epsilon)
         terminated = False
         truncated = False
         while not terminated and not truncated:
             terminated, truncated = step(env,window)
-        env.epsilon -= 0.1
+        env.epsilon -= 0.01
     env.show_q_table()
 
 def key_handler(env, window, event):
