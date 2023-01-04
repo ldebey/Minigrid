@@ -249,15 +249,40 @@ class AgentObsWrapper(ObservationWrapper):
             [OBJECT_TO_IDX[o.type] if o is not None else 0 for o in grid.grid]
         )
 
-        out = np.zeros((self.tile_size,self.tile_size))
+        out = np.zeros((self.tile_size, self.tile_size), dtype="uint8")
 
         for i in range(self.tile_size):
             for j in range(self.tile_size):
-                out[i,j] = objects[i*self.tile_size + j]
+                out[i, j] = objects[i * self.tile_size + j]
 
-        out[6,3] = 10        
+        out[6, 3] = 10
         obs["image"] = out
         return obs
+
+
+class ObjectifWrapper(Wrapper):
+    """
+    Wrapper qui ajoute une récompense lorsque l'agent voit l'objectif
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.objectif = False
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        for l in obs['image']:
+            if 8 in l:
+                reward += 1
+            elif 4 in l:
+                reward += 0.5
+
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        self.objectif = False
+        return self.env.reset(**kwargs)
 
 
 class FullyObsWrapper(ObservationWrapper):
