@@ -47,8 +47,10 @@ class ActionBonus(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
+        print(obs['image'])
+        print('8' in obs['image'])
+
         env = self.unwrapped
-        print(env.agent_dir)
         tup = (tuple(env.agent_pos), env.agent_dir, action)
 
         # Get the count for this (s,a) pair
@@ -62,6 +64,8 @@ class ActionBonus(gym.Wrapper):
 
         bonus = 1 / math.sqrt(new_count)
         reward += bonus
+
+        print("Reward: %f" % reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -214,6 +218,46 @@ class RGBImgPartialObsWrapper(ObservationWrapper):
         rgb_img_partial = self.get_frame(tile_size=self.tile_size, agent_pov=True)
 
         return {**obs, "image": rgb_img_partial}
+
+class AgentObsWrapper(ObservationWrapper):
+    """
+    Grille basée sur la vision de l'agent (7x7) contenant les id des objets
+    """
+
+    def __init__(self, env, tile_size=7):
+        super().__init__(env)
+
+        self.tile_size = tile_size
+
+        obs_shape = env.observation_space.spaces["image"].shape
+
+        new_image_space = spaces.Box(
+            low=0,
+            high=max(OBJECT_TO_IDX.values()),
+            shape=(obs_shape[0] * tile_size, obs_shape[1] * tile_size),
+            dtype="uint8",
+        )
+
+        self.observation_space = spaces.Dict(
+            {**self.observation_space.spaces, "image": new_image_space}
+        )
+
+    def observation(self, obs):
+        grid, vis_mask = self.gen_obs_grid()
+
+        objects = np.array(
+            [OBJECT_TO_IDX[o.type] if o is not None else 0 for o in grid.grid]
+        )
+
+        out = np.zeros((self.tile_size,self.tile_size))
+
+        for i in range(self.tile_size):
+            for j in range(self.tile_size):
+                out[i,j] = objects[i*self.tile_size + j]
+
+        out[6,3] = 10        
+        obs["image"] = out
+        return obs
 
 
 class FullyObsWrapper(ObservationWrapper):
