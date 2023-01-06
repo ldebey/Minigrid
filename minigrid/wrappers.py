@@ -7,9 +7,10 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 from gymnasium.core import ObservationWrapper, Wrapper
+from minigrid.core.actions import Actions
 
-from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX
-from minigrid.core.world_object import Goal
+from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX, IDX_TO_OBJECT
+from minigrid.core.world_object import Goal, Door
 
 
 class ReseedWrapper(Wrapper):
@@ -216,6 +217,21 @@ class RGBImgPartialObsWrapper(ObservationWrapper):
 
         return {**obs, "image": rgb_img_partial}
 
+
+def get_state(obj):
+    if obj is None:
+        return -1
+    elif type(obj) == Door:
+        if obj.is_locked:
+            return STATE_TO_IDX["locked"]
+        elif obj.is_open:
+            return STATE_TO_IDX["open"]
+        else:
+            return STATE_TO_IDX["closed"]
+    else:
+        return -1
+
+
 class AgentObsWrapper(ObservationWrapper):
     """
     Grille basée sur la vision de l'agent (7x7) contenant les id des objets
@@ -246,11 +262,13 @@ class AgentObsWrapper(ObservationWrapper):
             [OBJECT_TO_IDX[o.type] if o is not None else 3 for o in grid.grid]
         )
 
-        out = np.zeros((self.tile_size, self.tile_size), dtype="uint8")
+        out = np.zeros((self.tile_size, self.tile_size, 2), dtype="uint8")
+        # np zeros with tuple
 
         for i in range(self.tile_size):
             for j in range(self.tile_size):
-                out[i, j] = objects[i * self.tile_size + j]
+                out[i, j, 0] = objects[i * self.tile_size + j]
+                out[i, j, 1] = get_state(grid.grid[i * self.tile_size + j])
 
         obs["image"] = out
         return obs
@@ -263,17 +281,37 @@ class ObjectifWrapper(Wrapper):
 
     def __init__(self, env):
         super().__init__(env)
-        self.objectif = False
+        self.doors_opened = 0
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-
-        for l in obs['image']:
-            if 8 in l:
-                reward += 1
-            elif 4 in l:
-                reward += 0.5
-
+        if 8 in obs['image']:
+            objectif_pos = np.where(obs['image'] == 8)
+            dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
+            reward += 1 / dist
+            print(f'dist_objectif = {dist}')
+        if 4 in obs['image']:
+            doors_pos = np.where(obs['image'] == 4)
+            for d in range(len(doors_pos[0])):
+                dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
+                door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
+                door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
+                print(f'dist{d}: {dist}, state: {door_state_str}')
+                if door_state_str != 'open':
+                    reward += 1 / dist
+                if action == Actions.toggle and (doors_pos[0][d], doors_pos[1][d]) == (5, 3):
+                    match door_state_str:
+                        case 'open':
+                            self.doors_opened += 1
+                        case 'closed':
+                            self.doors_opened -= 1
+        print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
+        reward += self.doors_opened
+        if obs['image'][5][3][0] == 2:
+            reward -= 0.5 if reward >= 0.5 else reward
+        if terminated:
+            reward += 10
+            self.doors_opened = 0
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
