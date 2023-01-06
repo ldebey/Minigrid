@@ -47,9 +47,6 @@ class ActionBonus(gym.Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        print(obs['image'])
-        print('8' in obs['image'])
-
         env = self.unwrapped
         tup = (tuple(env.agent_pos), env.agent_dir, action)
 
@@ -246,7 +243,7 @@ class AgentObsWrapper(ObservationWrapper):
         grid, vis_mask = self.gen_obs_grid()
 
         objects = np.array(
-            [OBJECT_TO_IDX[o.type] if o is not None else 0 for o in grid.grid]
+            [OBJECT_TO_IDX[o.type] if o is not None else 3 for o in grid.grid]
         )
 
         out = np.zeros((self.tile_size, self.tile_size), dtype="uint8")
@@ -255,7 +252,6 @@ class AgentObsWrapper(ObservationWrapper):
             for j in range(self.tile_size):
                 out[i, j] = objects[i * self.tile_size + j]
 
-        out[6, 3] = 10
         obs["image"] = out
         return obs
 

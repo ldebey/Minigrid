@@ -7,6 +7,7 @@ import gymnasium as gym
 
 from minigrid.utils.window import Window
 from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, AgentObsWrapper
+from minigrid_env import State
 
 
 def redraw(window, img):
@@ -28,16 +29,18 @@ def reset(env, window, seed=None):
 def step(env, window, action):
     obs, reward, terminated, truncated, info = env.step(action)
     #print(f"step={env.step_count}, direction={env.agent_dir}, reward={reward:.2f}")
+    
+    
 
-    #print(obs)
+    
     #obs => image = tableau de 7x7x3 contenant des entiers représentant les object vu par l'agent
     #obs => direction = de 0 à 3 sachant que 0 = droite, 1 = bas, 2 = gauche, 3 = haut
     #terminated = boolean qui passe à vrai lorsque l'agent tombe dans la lave ou sur la sortie
     #truncated = boolean qui passe à vrai lorsque step_count >= max_step_count
 
     #print(f"obs : image={obs['image']}, direction={obs['direction']},mission={obs['mission']}")
-    for tab in obs["image"]:
-        print(tab)
+    
+    print(State(obs["image"]))
 
     if terminated:
         print("terminated!")
