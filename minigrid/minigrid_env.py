@@ -57,14 +57,6 @@ OBJECT_TO_IDX = {
     "agent": 10,
 }
 
-DIRECTION_FOR_AGENT = {
-    "left": 0,
-    "topLeft": 1,
-    "top": 2,
-    "topRight": 3,
-    "right": 4
-}
-
 IDX_TO_OBJECT = dict(zip(OBJECT_TO_IDX.values(), OBJECT_TO_IDX.keys()))
 
 # Map of state names to integers
@@ -85,32 +77,6 @@ DIR_TO_VEC = [
     # Up (negative Y)
     np.array((0, -1)),
 ]
-
-
-class State():
-    def __init__(self,image):
-        self.goal_visible = False
-        self.goal_direction = None
-        index = 0
-        for table in image:
-            if 8 in table:
-                self.goal_visible = True
-                if index == 6:
-                    if np.where(table == 8)[0][0] < 3:
-                        self.goal_direction = DIRECTION_FOR_AGENT["left"]
-                    else:
-                        self.goal_direction = DIRECTION_FOR_AGENT["right"]
-                else:
-                    if np.where(table == 8)[0][0] < 3:
-                        self.goal_direction = DIRECTION_FOR_AGENT["topLeft"]
-                    elif np.where(table == 8)[0][0] == 3:
-                        self.goal_direction = DIRECTION_FOR_AGENT["top"]
-                    else:
-                        self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
-            index += 1
-
-    def __str__(self) :
-        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction}"
 
 
 def check_if_no_duplicate(duplicate_list: list) -> bool:

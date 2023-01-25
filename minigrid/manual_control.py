@@ -6,8 +6,7 @@ matplotlib.use('TkAgg')
 import gymnasium as gym
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, AgentObsWrapper
-from minigrid_env import State
+from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, AgentObsWrapper, ObjectifWrapper,State
 
 
 def redraw(window, img):
@@ -121,6 +120,7 @@ if __name__ == "__main__":
     )
 
     env = AgentObsWrapper(env)
+    env = ObjectifWrapper(env)
     env = DictObservationSpaceWrapper(env)
     if args.agent_view:
         env = RGBImgPartialObsWrapper(env)

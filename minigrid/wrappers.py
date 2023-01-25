@@ -12,6 +12,40 @@ from minigrid.core.actions import Actions
 from minigrid.core.constants import COLOR_TO_IDX, OBJECT_TO_IDX, STATE_TO_IDX, IDX_TO_OBJECT
 from minigrid.core.world_object import Goal, Door
 
+DIRECTION_FOR_AGENT = {
+    "left": 0,
+    "topLeft": 1,
+    "top": 2,
+    "topRight": 3,
+    "right": 4
+}
+
+class State():
+    def __init__(self,image):
+        self.goal_visible = False
+        self.goal_direction = None
+        index = 0
+        for table in image:
+            if 8 in table:
+                self.goal_visible = True
+                if index == 6:
+                    if np.where(table == 8)[0][0] < 3:
+                        self.goal_direction = DIRECTION_FOR_AGENT["left"]
+                    else:
+                        self.goal_direction = DIRECTION_FOR_AGENT["right"]
+                else:
+                    if np.where(table == 8)[0][0] < 3:
+                        self.goal_direction = DIRECTION_FOR_AGENT["topLeft"]
+                    elif np.where(table == 8)[0][0] == 3:
+                        self.goal_direction = DIRECTION_FOR_AGENT["top"]
+                    else:
+                        self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
+            index += 1
+
+    def __str__(self) :
+        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction}"
+
+
 
 class ReseedWrapper(Wrapper):
     """
@@ -289,6 +323,10 @@ class ObjectifWrapper(Wrapper):
             objectif_pos = np.where(obs['image'] == 8)
             dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
             reward += 1 / dist
+
+            if State(obs["image"]).goal_direction == 2:
+                reward += 1
+
             print(f'dist_objectif = {dist}')
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
@@ -305,13 +343,15 @@ class ObjectifWrapper(Wrapper):
                             self.doors_opened += 1
                         case 'closed':
                             self.doors_opened -= 1
-        print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
+        #print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
         reward += self.doors_opened
         if obs['image'][5][3][0] == 2:
             reward -= 0.5 if reward >= 0.5 else reward
         if terminated:
             reward += 10
             self.doors_opened = 0
+
+        print("reward: ",reward)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
