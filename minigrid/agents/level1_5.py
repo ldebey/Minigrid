@@ -88,9 +88,36 @@ def key_handler(env, window, event):
 
 if __name__ == "__main__":
     # Create the environment
-    env = gym.make("MiniGrid-FourRooms-v0")
+    import argparse
 
-    env = ReseedWrapper(env)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--env", help="gym environment to load", default="MiniGrid-FourRooms-v0"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="random seed to generate the environment with",
+        default=-1,
+    )
+    parser.add_argument(
+        "--tile_size", type=int, help="size at which to render tiles", default=32
+    )
+    parser.add_argument(
+        "--agent_view",
+        default=False,
+        help="draw the agent sees (partially observable view)",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+
+    env = gym.make(
+        args.env,
+        tile_size=args.tile_size,
+    )
+
+    env = ReseedWrapper(env, seeds=[args.seed])
     env = AgentObsWrapper(env)
     env = ActionBonus(env)
     env = ObjectifWrapper(env)
