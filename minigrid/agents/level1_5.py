@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from minigrid.wrappers import AgentObsWrapper, ActionBonus, QTableRewardBonus, ObjectifWrapper, ReseedWrapper
+from minigrid.wrappers import AgentObsWrapper, ActionBonus, QTableRewardBonus, ObjectifWrapper, ReseedWrapper, StateBonus
 from minigrid.utils.window import Window
 import gymnasium as gym
 import matplotlib
@@ -58,13 +58,13 @@ def step_learning(env, window):
 
 def start_learning(env, window):
     env.epsilon = 1
-    for i in range(100):
+    for i in range(200):
         # print("epsilon = ",env.epsilon)
         terminated = False
         truncated = False
         while not terminated and not truncated:
             terminated, truncated = step_learning(env, window)
-        env.epsilon = env.epsilon - env.epsilon * (i/100)
+        env.epsilon = env.epsilon - env.epsilon * (i/200)
     print("=====================================")
     print("Entrainement terminé")
 
@@ -92,7 +92,8 @@ if __name__ == "__main__":
 
     env = ReseedWrapper(env)
     env = AgentObsWrapper(env)
-    env = ActionBonus(env)
+    # env = ActionBonus(env)
+    env = StateBonus(env)
     env = ObjectifWrapper(env)
     env = QTableRewardBonus(env)
 
