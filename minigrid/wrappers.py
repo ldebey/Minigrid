@@ -98,7 +98,7 @@ class ActionBonus(gym.Wrapper):
         bonus = 1 / math.sqrt(new_count)
         reward += bonus
 
-        print("Reward: %f" % reward)
+        # print("Reward: %f" % reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -328,6 +328,8 @@ class ObjectifWrapper(Wrapper):
             dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
             reward += 1 / dist
 
+            print(State(obs["image"]))
+
             if State(obs["image"]).goal_direction == 2:
                 reward += 1
 
@@ -337,7 +339,8 @@ class ObjectifWrapper(Wrapper):
             for d in range(len(doors_pos[0])):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
-                door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
+                door_state_str = [
+                    k for k, v in STATE_TO_IDX.items() if v == door_state][0]
                 print(f'dist{d}: {dist}, state: {door_state_str}')
                 if door_state_str != 'open':
                     reward += 1 / dist
@@ -349,14 +352,14 @@ class ObjectifWrapper(Wrapper):
                             self.doors_opened -= 1
         reward += self.doors_opened
         # if obs['image'][5][3][0] == 4:
-            # self.observation_space.spaces['direction']
-            # self.doors_passed[self.unwrapped.agent_pos]
-        print(f'doors_passed: {self.doors_passed}')
+        # self.observation_space.spaces['direction']
+        # self.doors_passed[self.unwrapped.agent_pos]
+        # print(f'doors_passed: {self.doors_passed}')
         if terminated:
             reward += 10
             self.doors_opened = 0
 
-        print("reward: ", reward)
+        # print("reward: ", reward)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
