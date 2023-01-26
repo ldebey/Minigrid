@@ -319,6 +319,7 @@ class ObjectifWrapper(Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.doors_opened = 0
+        self.doors_passed = {}
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -336,8 +337,7 @@ class ObjectifWrapper(Wrapper):
             for d in range(len(doors_pos[0])):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
-                door_state_str = [
-                    k for k, v in STATE_TO_IDX.items() if v == door_state][0]
+                door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
                 print(f'dist{d}: {dist}, state: {door_state_str}')
                 if door_state_str != 'open':
                     reward += 1 / dist
@@ -347,19 +347,21 @@ class ObjectifWrapper(Wrapper):
                             self.doors_opened += 1
                         case 'closed':
                             self.doors_opened -= 1
-        # print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
         reward += self.doors_opened
-        if obs['image'][5][3][0] == 2:
-            reward -= 0.5 if reward >= 0.5 else reward
+        # if obs['image'][5][3][0] == 4:
+            # self.observation_space.spaces['direction']
+            # self.doors_passed[self.unwrapped.agent_pos]
+        print(f'doors_passed: {self.doors_passed}')
         if terminated:
             reward += 10
             self.doors_opened = 0
 
-        # print("reward: ",reward)
+        print("reward: ", reward)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
-        self.objectif = False
+        self.doors_opened = 0
+        self.doors_passed = {}
         return self.env.reset(**kwargs)
 
 
