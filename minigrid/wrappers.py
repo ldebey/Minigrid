@@ -20,8 +20,9 @@ DIRECTION_FOR_AGENT = {
     "right": 4
 }
 
+
 class State():
-    def __init__(self,image):
+    def __init__(self, image):
         self.goal_visible = False
         self.goal_direction = None
         index = 0
@@ -42,9 +43,8 @@ class State():
                         self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
             index += 1
 
-    def __str__(self) :
+    def __str__(self):
         return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction}"
-
 
 
 class ReseedWrapper(Wrapper):
@@ -61,8 +61,9 @@ class ReseedWrapper(Wrapper):
 
     def reset(self, **kwargs):
         seed = self.seeds[self.seed_idx]
+        # print("Seed : ", seed)
         self.seed_idx = (self.seed_idx + 1) % len(self.seeds)
-        return self.env.reset(seed=seed, **kwargs)
+        return self.env.reset(seed=seed)
 
     def step(self, action):
         return self.env.step(action)
@@ -179,7 +180,8 @@ class OneHotPartialObsWrapper(ObservationWrapper):
 
     def observation(self, obs):
         img = obs["image"]
-        out = np.zeros(self.observation_space.spaces["image"].shape, dtype="uint8")
+        out = np.zeros(
+            self.observation_space.spaces["image"].shape, dtype="uint8")
 
         for i in range(img.shape[0]):
             for j in range(img.shape[1]):
@@ -247,7 +249,8 @@ class RGBImgPartialObsWrapper(ObservationWrapper):
         )
 
     def observation(self, obs):
-        rgb_img_partial = self.get_frame(tile_size=self.tile_size, agent_pov=True)
+        rgb_img_partial = self.get_frame(
+            tile_size=self.tile_size, agent_pov=True)
 
         return {**obs, "image": rgb_img_partial}
 
@@ -333,7 +336,8 @@ class ObjectifWrapper(Wrapper):
             for d in range(len(doors_pos[0])):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
-                door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
+                door_state_str = [
+                    k for k, v in STATE_TO_IDX.items() if v == door_state][0]
                 print(f'dist{d}: {dist}, state: {door_state_str}')
                 if door_state_str != 'open':
                     reward += 1 / dist
@@ -343,7 +347,7 @@ class ObjectifWrapper(Wrapper):
                             self.doors_opened += 1
                         case 'closed':
                             self.doors_opened -= 1
-        #print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
+        # print(f'case in front of agent: {IDX_TO_OBJECT[obs["image"][5][3][0]]}')
         reward += self.doors_opened
         if obs['image'][5][3][0] == 2:
             reward -= 0.5 if reward >= 0.5 else reward
@@ -351,7 +355,7 @@ class ObjectifWrapper(Wrapper):
             reward += 10
             self.doors_opened = 0
 
-        print("reward: ",reward)
+        # print("reward: ",reward)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
@@ -503,7 +507,8 @@ class DictObservationSpaceWrapper(ObservationWrapper):
     def observation(self, obs):
         obs["mission"] = self.string_to_indices(obs["mission"])
         assert len(obs["mission"]) < self.max_words_in_mission
-        obs["mission"] += [0] * (self.max_words_in_mission - len(obs["mission"]))
+        obs["mission"] += [0] * \
+            (self.max_words_in_mission - len(obs["mission"]))
 
         return obs
 
@@ -541,7 +546,7 @@ class FlatObsWrapper(ObservationWrapper):
         # Cache the last-encoded mission string
         if mission != self.cachedStr:
             assert (
-                    len(mission) <= self.maxStrLen
+                len(mission) <= self.maxStrLen
             ), f"mission string too long ({len(mission)} chars)"
             mission = mission.lower()
 
@@ -636,7 +641,8 @@ class DirectionObsWrapper(ObservationWrapper):
             self.goal_position[1] - self.agent_pos[1],
             self.goal_position[0] - self.agent_pos[0],
         )
-        obs["goal_direction"] = np.arctan(slope) if self.type == "angle" else slope
+        obs["goal_direction"] = np.arctan(
+            slope) if self.type == "angle" else slope
         return obs
 
 
@@ -726,7 +732,9 @@ class QTableRewardBonus(gym.Wrapper):
 
         # Q-Learning
         self.q_table[old_pos][(action)] = self.q_table[old_pos][(action)] + self.alpha * (
-                reward + self.gamma * np.max(self.q_table[new_pos][(action)]) - self.q_table[old_pos][(action)]
+            reward + self.gamma *
+            np.max(self.q_table[new_pos][(action)]) -
+            self.q_table[old_pos][(action)]
         )
 
         return obs, reward, terminated, truncated, info
@@ -757,7 +765,8 @@ class RewardWrapper(Wrapper):
             match obs['direction']:
                 case 0:  # right
                     if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
-                        reward += 0.25 + 0.25 / (abs(agent_pos[0] - mission_pos[0]))
+                        reward += 0.25 + 0.25 / \
+                            (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
@@ -765,26 +774,32 @@ class RewardWrapper(Wrapper):
                         reward /= 2
                 case 1:  # down
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
-                        reward += 0.25 + 0.25 / (abs(agent_pos[1] - mission_pos[1]))
+                        reward += 0.25 + 0.25 / \
+                            (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] < mission_pos[1]:
-                            reward += 0.25 / (abs(agent_pos[1] - mission_pos[1]))
+                            reward += 0.25 / \
+                                (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
                         reward /= 2
                 case 2:  # left
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
-                        reward += 0.25 + 0.25 / (abs(agent_pos[0] - mission_pos[0]))
+                        reward += 0.25 + 0.25 / \
+                            (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] > mission_pos[0]:
-                            reward += 0.25 / (abs(agent_pos[0] - mission_pos[0]))
+                            reward += 0.25 / \
+                                (abs(agent_pos[0] - mission_pos[0]))
                     if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
                         reward /= 2
                 case 3:  # up
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
-                        reward += 0.25 + 0.25 / (abs(agent_pos[1] - mission_pos[1]))
+                        reward += 0.25 + 0.25 / \
+                            (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] > mission_pos[1]:
-                            reward += 0.25 / (abs(agent_pos[1] - mission_pos[1]))
+                            reward += 0.25 / \
+                                (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
                         reward /= 2
             if reward == 1:
