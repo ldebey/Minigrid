@@ -98,7 +98,7 @@ if __name__ == "__main__":
         "--seed",
         type=int,
         help="random seed to generate the environment with",
-        default=-1,
+        default=0,
     )
     parser.add_argument(
         "--tile_size", type=int, help="size at which to render tiles", default=32

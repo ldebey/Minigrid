@@ -98,7 +98,7 @@ class ActionBonus(gym.Wrapper):
         bonus = 1 / math.sqrt(new_count)
         reward += bonus
 
-        print("Reward: %f" % reward)
+        # print("Reward: %f" % reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -330,6 +330,8 @@ class ObjectifWrapper(Wrapper):
             dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
             reward += 1 / dist
 
+            print(State(obs["image"]))
+
             if State(obs["image"]).goal_direction == 2:
                 reward += 1
 
@@ -378,7 +380,7 @@ class ObjectifWrapper(Wrapper):
             reward += 10
             self.doors_opened = 0
 
-        print("reward:", reward)
+        # print("reward: ", reward)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
@@ -533,7 +535,7 @@ class DictObservationSpaceWrapper(ObservationWrapper):
         obs["mission"] = self.string_to_indices(obs["mission"])
         assert len(obs["mission"]) < self.max_words_in_mission
         obs["mission"] += [0] * \
-                          (self.max_words_in_mission - len(obs["mission"]))
+            (self.max_words_in_mission - len(obs["mission"]))
 
         return obs
 
@@ -571,7 +573,7 @@ class FlatObsWrapper(ObservationWrapper):
         # Cache the last-encoded mission string
         if mission != self.cachedStr:
             assert (
-                    len(mission) <= self.maxStrLen
+                len(mission) <= self.maxStrLen
             ), f"mission string too long ({len(mission)} chars)"
             mission = mission.lower()
 
@@ -757,9 +759,9 @@ class QTableRewardBonus(gym.Wrapper):
 
         # Q-Learning
         self.q_table[old_pos][(action)] = self.q_table[old_pos][(action)] + self.alpha * (
-                reward + self.gamma *
-                np.max(self.q_table[new_pos][(action)]) -
-                self.q_table[old_pos][(action)]
+            reward + self.gamma *
+            np.max(self.q_table[new_pos][(action)]) -
+            self.q_table[old_pos][(action)]
         )
 
         return obs, reward, terminated, truncated, info
@@ -791,7 +793,7 @@ class RewardWrapper(Wrapper):
                 case 0:  # right
                     if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                                  (abs(agent_pos[0] - mission_pos[0]))
+                            (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
@@ -800,31 +802,31 @@ class RewardWrapper(Wrapper):
                 case 1:  # down
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                                  (abs(agent_pos[1] - mission_pos[1]))
+                            (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] < mission_pos[1]:
                             reward += 0.25 / \
-                                      (abs(agent_pos[1] - mission_pos[1]))
+                                (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
                         reward /= 2
                 case 2:  # left
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                                  (abs(agent_pos[0] - mission_pos[0]))
+                            (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] > mission_pos[0]:
                             reward += 0.25 / \
-                                      (abs(agent_pos[0] - mission_pos[0]))
+                                (abs(agent_pos[0] - mission_pos[0]))
                     if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
                         reward /= 2
                 case 3:  # up
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                                  (abs(agent_pos[1] - mission_pos[1]))
+                            (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] > mission_pos[1]:
                             reward += 0.25 / \
-                                      (abs(agent_pos[1] - mission_pos[1]))
+                                (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
                         reward /= 2
             if reward == 1:
