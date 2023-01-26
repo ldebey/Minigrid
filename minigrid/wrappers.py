@@ -371,11 +371,11 @@ class ObjectifWrapper(Wrapper):
                     if (agent_x, agent_y + 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y + 1)] = (1, 3)
                 case 2:
-                    if (agent_x, agent_y - 1) not in self.doors_pos:
-                        self.doors_pos[(agent_x, agent_y - 1)] = (2, 0)
-                case 3:
                     if (agent_x - 1, agent_y) not in self.doors_pos:
-                        self.doors_pos[(agent_x - 1, agent_y)] = (3, 1)
+                        self.doors_pos[(agent_x - 1, agent_y)] = (2, 0)
+                case 3:
+                    if (agent_x, agent_y - 1) not in self.doors_pos:
+                        self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
         if terminated:
             reward += 10
             self.doors_opened = 0
