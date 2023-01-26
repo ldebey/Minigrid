@@ -361,7 +361,7 @@ class ObjectifWrapper(Wrapper):
         reward += self.doors_passed
         # print(f'agent_pos: {agent_x, agent_y}')
         # print(f'direction: {obs["direction"]}')
-        # print(f'doors_passed: {self.doors_passed}')
+        print(f'doors_passed: {self.doors_passed}')
         if obs['image'][5][3][0] == 4:
             match obs['direction']:
                 case 0:
@@ -374,8 +374,8 @@ class ObjectifWrapper(Wrapper):
                     if (agent_x, agent_y - 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y - 1)] = (2, 0)
                 case 3:
-                    if (agent_x, agent_y - 1) not in self.doors_pos:
-                        self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
+                    if (agent_x - 1, agent_y) not in self.doors_pos:
+                        self.doors_pos[(agent_x - 1, agent_y)] = (3, 1)
         if terminated:
             reward += 10
             self.doors_opened = 0
