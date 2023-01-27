@@ -25,6 +25,11 @@ class State():
     def __init__(self, image):
         self.goal_visible = False
         self.goal_direction = None
+        self.wall_front_of_agent = False
+        self.wall_left_of_agent = False
+        self.wall_right_of_agent = False
+        self.wall_left_distance = 0
+        self.wall_right_distance = 0
         index = 0
         for table in image:
             if 8 in table:
@@ -43,8 +48,37 @@ class State():
                         self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
             index += 1
 
+        #si face a un mur
+        if image[5][3][0] == 2:
+            self.wall_front_of_agent = True
+        else:
+            self.wall_front_of_agent = False
+
+        left_distances = []
+        right_distances = []
+        table = image[6]
+        if 2 in table:
+            if np.where(table == 2)[0][0] < 3:
+                self.wall_left_of_agent = True
+                left_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+            elif np.where(table == 2)[0][0] > 3:
+                self.wall_right_of_agent = True
+                right_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+        
+        if len(left_distances) > 0:
+            self.wall_left_distance = min(left_distances)
+        else:
+            self.wall_left_distance = 0
+
+        if len(right_distances) > 0:
+            self.wall_right_distance = min(right_distances)
+        else:
+            self.wall_right_distance = 0
+
+        
+
     def __str__(self):
-        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction}"
+        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} / Wall left of agent : {self.wall_left_of_agent} / Wall right of agent : {self.wall_right_of_agent} \n Wall left distance : {self.wall_left_distance} / Wall right distance : {self.wall_right_distance}"
 
 
 class ReseedWrapper(Wrapper):
@@ -302,10 +336,14 @@ class AgentObsWrapper(ObservationWrapper):
         out = np.zeros((self.tile_size, self.tile_size, 2), dtype="uint8")
         # np zeros with tuple
 
-        for i in range(self.tile_size):
-            for j in range(self.tile_size):
-                out[i, j, 0] = objects[i * self.tile_size + j]
-                out[i, j, 1] = get_state(grid.grid[i * self.tile_size + j])
+        for i in range(self.tile_size - 1 , -1 , -1):
+            for j in range(self.tile_size - 1 , -1 , -1):
+                if out[i, j, 0] == 0:
+                    out[i, j, 0] = objects[i * self.tile_size + j]
+                    if out[i, j, 0] == 2:
+                        for k in range(i-1,0,-1):
+                            out[k,j,0] = 1
+                    out[i, j, 1] = get_state(grid.grid[i * self.tile_size + j])
 
         obs["image"] = out
         return obs
@@ -324,16 +362,21 @@ class ObjectifWrapper(Wrapper):
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         if 8 in obs['image']:
-            objectif_pos = np.where(obs['image'] == 8)
-            dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
-            reward += 1 / dist
+            if not State(obs["image"]).wall_front_of_agent:
+                objectif_pos = np.where(obs['image'] == 8)
+                dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
+                reward += 1 / dist
 
-            print(State(obs["image"]))
+                #en train de se manger un mur
+                # if obs['image'][5][3][0] == 2:
+                #     reward -= 1
 
-            if State(obs["image"]).goal_direction == 2:
-                reward += 1
+                print(State(obs["image"]))
 
-            print(f'dist_objectif = {dist}')
+                if State(obs["image"]).goal_direction == 2:
+                    reward += 1
+
+                print(f'dist_objectif = {dist}')
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
             for d in range(len(doors_pos[0])):

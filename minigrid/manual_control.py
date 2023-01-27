@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--env", help="gym environment to load", default="MiniGrid-MultiRoom-N6-v0"
+        "--env", help="gym environment to load", default="MiniGrid-FourRooms-v0"
     )
     parser.add_argument(
         "--seed",

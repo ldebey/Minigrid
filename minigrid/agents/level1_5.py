@@ -58,13 +58,13 @@ def step_learning(env, window):
 
 def start_learning(env, window):
     env.epsilon = 1
-    for i in range(200):
+    for i in range(500):
         # print("epsilon = ",env.epsilon)
         terminated = False
         truncated = False
         while not terminated and not truncated:
             terminated, truncated = step_learning(env, window)
-        env.epsilon = env.epsilon - env.epsilon * (i/200)
+        env.epsilon = env.epsilon - env.epsilon * (i/500)
     print("=====================================")
     print("Entrainement terminé")
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     env = ReseedWrapper(env, seeds=[args.seed])
     env = AgentObsWrapper(env)
-    # env = ActionBonus(env)
+    env = ActionBonus(env)
     env = StateBonus(env)
     env = ObjectifWrapper(env)
     env = QTableRewardBonus(env)
