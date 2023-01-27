@@ -357,7 +357,9 @@ class ObjectifWrapper(Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.doors_opened = 0
-        self.doors_passed = {}
+        self.doors_passed = 0
+        self.doors_pos = {}
+        self.front_door = False
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -382,8 +384,7 @@ class ObjectifWrapper(Wrapper):
             for d in range(len(doors_pos[0])):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
-                door_state_str = [
-                    k for k, v in STATE_TO_IDX.items() if v == door_state][0]
+                door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
                 print(f'dist{d}: {dist}, state: {door_state_str}')
                 if door_state_str != 'open':
                     reward += 1 / dist
@@ -394,10 +395,30 @@ class ObjectifWrapper(Wrapper):
                         case 'closed':
                             self.doors_opened -= 1
         reward += self.doors_opened
-        # if obs['image'][5][3][0] == 4:
-        # self.observation_space.spaces['direction']
-        # self.doors_passed[self.unwrapped.agent_pos]
-        # print(f'doors_passed: {self.doors_passed}')
+        agent_x, agent_y = self.unwrapped.agent_pos
+        if (agent_x, agent_y) in self.doors_pos and action != Actions.toggle:
+            if self.doors_pos[(agent_x, agent_y)][0] == obs['direction']:
+                self.doors_passed += 1
+            elif self.doors_pos[(agent_x, agent_y)][1] == obs['direction']:
+                self.doors_passed -= 1
+        reward += self.doors_passed
+        # print(f'agent_pos: {agent_x, agent_y}')
+        # print(f'direction: {obs["direction"]}')
+        print(f'doors_passed: {self.doors_passed}')
+        if obs['image'][5][3][0] == 4:
+            match obs['direction']:
+                case 0:
+                    if (agent_x + 1, agent_y) not in self.doors_pos:
+                        self.doors_pos[(agent_x + 1, agent_y)] = (0, 2)
+                case 1:
+                    if (agent_x, agent_y + 1) not in self.doors_pos:
+                        self.doors_pos[(agent_x, agent_y + 1)] = (1, 3)
+                case 2:
+                    if (agent_x - 1, agent_y) not in self.doors_pos:
+                        self.doors_pos[(agent_x - 1, agent_y)] = (2, 0)
+                case 3:
+                    if (agent_x, agent_y - 1) not in self.doors_pos:
+                        self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
         if terminated:
             reward += 10
             self.doors_opened = 0
@@ -407,7 +428,8 @@ class ObjectifWrapper(Wrapper):
 
     def reset(self, **kwargs):
         self.doors_opened = 0
-        self.doors_passed = {}
+        self.doors_passed = 0
+        self.doors_pos = {}
         return self.env.reset(**kwargs)
 
 
