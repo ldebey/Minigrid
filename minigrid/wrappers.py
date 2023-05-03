@@ -790,7 +790,7 @@ class QLearningWrapper:
         new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (reward + self.discount_factor * next_max)
         self.q_table[state][action] = new_value
 
-    def train(self, window, num_episodes=1000):
+    def train(self, num_episodes=1000):
         for episode in range(num_episodes):
             print(f"Episode {episode}")
             state = self.get_state(self.env.reset()[0])
@@ -802,8 +802,6 @@ class QLearningWrapper:
                 next_state = self.get_state(observation)
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
-
-                self.redraw(window, self.env.get_frame())
 
             # Diminuer le taux d'exploration après chaque épisode
             self.exploration_rate *= self.exploration_decay_rate
