@@ -77,7 +77,16 @@ class State():
             self.wall_right_distance = 0
 
         
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (self.goal_visible == other.goal_visible and self.goal_direction == other.goal_direction and
+            self.wall_front_of_agent == other.wall_front_of_agent and self.wall_left_of_agent == other.wall_left_of_agent and
+            self.wall_right_of_agent == other.wall_right_of_agent and self.wall_left_distance == other.wall_left_distance and
+            self.wall_right_distance == other.wall_right_distance)
+        return False
 
+    def __hash__(self):
+        return hash(tuple(sorted(self.__dict__.items())))
     def __str__(self):
         return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} / Wall left of agent : {self.wall_left_of_agent} / Wall right of agent : {self.wall_right_of_agent} \n Wall left distance : {self.wall_left_distance} / Wall right distance : {self.wall_right_distance}"
 
@@ -138,6 +147,7 @@ class ActionBonus(gym.Wrapper):
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
+        self.counts = {}
         return self.env.reset(**kwargs)
 
 
@@ -369,9 +379,9 @@ class ObjectifWrapper(Wrapper):
                 objectif_pos = np.where(obs['image'] == 8)
                 dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
                 if dist > 0:
-                    reward += 1 / dist
+                    reward += 10 / dist
                 else:
-                    reward += 1
+                    reward += 10
 
                 #en train de se manger un mur
                 # if obs['image'][5][3][0] == 2:
@@ -380,7 +390,7 @@ class ObjectifWrapper(Wrapper):
                 print(State(obs["image"]))
 
                 if State(obs["image"]).goal_direction == 2:
-                    reward += 1
+                    reward += 100
 
                 print(f'dist_objectif = {dist}')
         if 4 in obs['image']:
@@ -805,6 +815,8 @@ class QLearningWrapper:
                 next_state = self.get_state(observation)
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
+
+                print(f"Reward: {reward}")
 
             # Diminuer le taux d'exploration après chaque épisode
             self.exploration_rate *= self.exploration_decay_rate
