@@ -368,7 +368,10 @@ class ObjectifWrapper(Wrapper):
             if not State(obs["image"]).wall_front_of_agent:
                 objectif_pos = np.where(obs['image'] == 8)
                 dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
-                reward += 1 / dist
+                if dist > 0:
+                    reward += 1 / dist
+                else:
+                    reward += 1
 
                 #en train de se manger un mur
                 # if obs['image'][5][3][0] == 2:

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 from minigrid.utils.window import Window
-from minigrid.wrappers import QLearningWrapper, State, RGBImgObsWrapper
+from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper
 import gymnasium as gym
 import matplotlib
 
 matplotlib.use('TkAgg')
 
 # Create the environment
-env = gym.make('MiniGrid-Empty-8x8-v0')
-env = RGBImgObsWrapper(env)
+env = gym.make('MiniGrid-FourRooms-v0')
+env = ObjectifWrapper(env)
+env = AgentObsWrapper(env)
 
 # Create the Q-learning wrapper
 ql_wrapper = QLearningWrapper(env)
