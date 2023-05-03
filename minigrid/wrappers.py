@@ -1,5 +1,6 @@
 import math
 import operator
+import time
 from functools import reduce
 import random
 
@@ -404,7 +405,7 @@ class ObjectifWrapper(Wrapper):
         reward += self.doors_passed
         # print(f'agent_pos: {agent_x, agent_y}')
         # print(f'direction: {obs["direction"]}')
-        print(f'doors_passed: {self.doors_passed}')
+        # print(f'doors_passed: {self.doors_passed}')
         if obs['image'][5][3][0] == 4:
             match obs['direction']:
                 case 0:
@@ -750,67 +751,84 @@ class SymbolicObsWrapper(ObservationWrapper):
 
 # Q - Table Rewards
 
-class QTableRewardBonus(gym.Wrapper):
-    """
-    Wrapper which adds a bonus reward for the agent reaching the goal.
-    """
-
-    def __init__(self, env):
-        super().__init__(env)
-        # Pourcentage d'exploration
-        self.epsilon = 0.3
-        self.alpha = 0.4
-        self.gamma = 0.9
+class QLearningWrapper:
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.99, exploration_rate=1.0, exploration_decay_rate=0.99):
+        self.env = env
         self.q_table = {}
-        for x in range(env.grid.height):
-            for y in range(env.grid.width):
-                for direction in range(4):
-                    self.q_table[((x, y), direction)] = {}
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.exploration_rate = exploration_rate
+        self.exploration_decay_rate = exploration_decay_rate
 
-                    self.q_table[((x, y), direction)][env.actions.left] = 0
-                    self.q_table[((x, y), direction)][env.actions.right] = 0
-                    self.q_table[((x, y), direction)][env.actions.forward] = 0
+    def get_state(self, observation):
+        image = observation['image']
+        return State(image)
 
-    # Choisit entre l'exploration aléatoire et l'exploitation selon une probabilité epsilon
+    def redraw(self, window, img):
+        window.show_img(img)
 
-    def take_action(self, state, Q):
-        if random.uniform(0, 1) < self.epsilon:
-            choice = random.randint(0, 2)
-            if choice == 0:
-                return self.unwrapped.actions.left
-            elif choice == 1:
-                return self.unwrapped.actions.right
-            elif choice == 2:
-                return self.unwrapped.actions.forward
+    def get_action(self, state):
+        if random.uniform(0, 1) < self.exploration_rate:
+            # Exploration : choisir une action aléatoire
+            action = self.env.action_space.sample()
         else:
-            return max(Q[state], key=Q[state].get)
+            # Exploitation : choisir l'action avec la plus grande valeur Q
+            if state not in self.q_table:
+                # Si l'état n'a jamais été vu, initialiser les valeurs Q à 0 pour toutes les actions possibles
+                self.q_table[state] = np.zeros(self.env.action_space.n)
+            action = np.argmax(self.q_table[state])
+        return action
 
-    def show_q_table(self):
-        print(self.q_table)
+    def update_q_table(self, state, action, reward, next_state):
+        if state not in self.q_table:
+            # Si l'état n'a jamais été vu, initialiser les valeurs Q à 0 pour toutes les actions possibles
+            self.q_table[state] = np.zeros(self.env.action_space.n)
+        if next_state not in self.q_table:
+            self.q_table[next_state] = np.zeros(self.env.action_space.n)
+        old_value = self.q_table[state][action]
+        next_max = np.max(self.q_table[next_state])
+        new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (reward + self.discount_factor * next_max)
+        self.q_table[state][action] = new_value
 
-    def set_q_table(self, q_table):
-        self.q_table = q_table
+    def train(self, window, num_episodes=1000):
+        for episode in range(num_episodes):
+            print(f"Episode {episode}")
+            state = self.get_state(self.env.reset()[0])
+            done = False
+            truncated = False
+            while not done and not truncated:
+                action = self.get_action(state)
+                observation, reward, done, truncated, _ = self.env.step(action)
+                next_state = self.get_state(observation)
+                self.update_q_table(state, action, reward, next_state)
+                state = next_state
 
-    def step(self):
-        env = self.unwrapped
-        old_pos = (tuple(env.agent_pos), env.agent_dir)
-        action = self.take_action(old_pos, self.q_table)
+                self.redraw(window, self.env.get_frame())
 
-        obs, reward, terminated, truncated, info = self.env.step(action)
+            # Diminuer le taux d'exploration après chaque épisode
+            self.exploration_rate *= self.exploration_decay_rate
 
-        new_pos = (tuple(env.agent_pos), env.agent_dir)
 
-        # Q-Learning
-        self.q_table[old_pos][(action)] = self.q_table[old_pos][(action)] + self.alpha * (
-            reward + self.gamma *
-            np.max(self.q_table[new_pos][(action)]) -
-            self.q_table[old_pos][(action)]
-        )
+    def test(self, window, num_episodes=100):
+        rewards = []
+        for episode in range(num_episodes):
+            state = self.get_state(self.env.reset()[0])
+            done = False
+            truncated = False
+            total_reward = 0
+            while not done and not truncated:
+                action = self.get_action(state)
+                observation, reward, done, truncated, _ = self.env.step(action)
+                next_state = self.get_state(observation)
+                state = next_state
+                total_reward += reward
 
-        return obs, reward, terminated, truncated, info
+                self.redraw(window, self.env.get_frame())
 
-    def reset(self, **kwargs):
-        return self.env.reset(**kwargs)
+            rewards.append(total_reward)
+
+        avg_reward = sum(rewards) / num_episodes
+        print(f"Average reward over {num_episodes} test episodes: {avg_reward}")
 
 
 class RewardWrapper(Wrapper):
