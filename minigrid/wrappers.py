@@ -402,7 +402,7 @@ class ObjectifWrapper(Wrapper):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
                 door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
-                print(f'dist{d}: {dist}, state: {door_state_str}')
+                # print(f'dist{d}: {dist}, state: {door_state_str}')
                 if door_state_str != 'open':
                     reward += 1 / dist
                 if action == Actions.toggle and (doors_pos[0][d], doors_pos[1][d]) == (5, 3):
@@ -805,6 +805,23 @@ class QLearningWrapper:
         next_max = np.max(self.q_table[next_state])
         new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (reward + self.discount_factor * next_max)
         self.q_table[state][action] = new_value
+        # Si une porte fermée est devant l'agent, lui donner une récompense positive
+        # Selon la position de l'agent, la porte peut-être à gauche ou à droite ou en haut ou en bas
+        match self.env.agent_dir:
+            case 0:  # right
+                if self.env.grid.get(self.env.agent_pos[0] + 1, self.env.agent_pos[1]) == Door:
+                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+            case 1:  # down
+                if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] + 1) == Door:
+                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+            case 2:  # left
+                if self.env.grid.get(self.env.agent_pos[0] - 1, self.env.agent_pos[1]) == Door:
+                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+            case 3:  # up
+                if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
+                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+
+
 
     def train(self, num_episodes=1000):
         for episode in range(num_episodes):
