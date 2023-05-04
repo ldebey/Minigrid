@@ -31,6 +31,7 @@ class State():
         self.wall_right_of_agent = False
         self.wall_left_distance = 0
         self.wall_right_distance = 0
+        self.wall_front_distance = 0
         index = 0
         for table in image:
             if 8 in table:
@@ -49,47 +50,49 @@ class State():
                         self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
             index += 1
 
-        #si face a un mur
-        if image[5][3][0] == 2:
-            self.wall_front_of_agent = True
-        else:
-            self.wall_front_of_agent = False
+            visibility = 3
 
-        left_distances = []
-        right_distances = []
-        table = image[6]
-        if 2 in table:
-            if np.where(table == 2)[0][0] < 3:
-                self.wall_left_of_agent = True
-                left_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
-            elif np.where(table == 2)[0][0] > 3:
-                self.wall_right_of_agent = True
-                right_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
-        
-        if len(left_distances) > 0:
-            self.wall_left_distance = min(left_distances)
-        else:
-            self.wall_left_distance = 0
+            # Recherche des murs
+            for i in range(0, visibility):
+                if image[6 - i][3][0] == 2:
+                    self.wall_front_of_agent = True
+                    self.wall_front_distance = visibility - i
+                    break
 
-        if len(right_distances) > 0:
-            self.wall_right_distance = min(right_distances)
-        else:
-            self.wall_right_distance = 0
+
+            left_distances = []
+            right_distances = []
+            for i in range(0, visibility):
+                if 2 in image[6 - i]:
+                    if np.where(image[6 - i] == 2)[0][0] < 3:
+                        self.wall_left_of_agent = True
+                        left_distances.append(i + 1)
+                    elif np.where(image[6 - i] == 2)[0][0] > 3:
+                        self.wall_right_of_agent = True
+                        right_distances.append(i + 1)
+
+            if len(left_distances) > 0:
+                self.wall_left_distance = min(left_distances)
+            if len(right_distances) > 0:
+                self.wall_right_distance = min(right_distances)
 
         
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return (self.goal_visible == other.goal_visible and self.goal_direction == other.goal_direction and
-            self.wall_front_of_agent == other.wall_front_of_agent and self.wall_left_of_agent == other.wall_left_of_agent and
-            self.wall_right_of_agent == other.wall_right_of_agent and self.wall_left_distance == other.wall_left_distance and
-            self.wall_right_distance == other.wall_right_distance)
+            return (self.goal_visible == other.goal_visible and
+                    self.goal_direction == other.goal_direction and
+                    self.wall_front_of_agent == other.wall_front_of_agent and
+                    self.wall_left_of_agent == other.wall_left_of_agent and
+                    self.wall_right_of_agent == other.wall_right_of_agent and
+                    self.wall_left_distance == other.wall_left_distance and
+                    self.wall_right_distance == other.wall_right_distance and
+                    self.wall_front_distance == other.wall_front_distance)
         return False
 
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
     def __str__(self):
-        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} / Wall left of agent : {self.wall_left_of_agent} / Wall right of agent : {self.wall_right_of_agent} \n Wall left distance : {self.wall_left_distance} / Wall right distance : {self.wall_right_distance}"
-
+        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} \nWall left of agent : {self.wall_left_distance} / Wall right agent : {self.wall_right_distance}"
 
 class ReseedWrapper(Wrapper):
     """
