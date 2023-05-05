@@ -49,7 +49,7 @@ class State():
                         self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
             index += 1
 
-        #si face a un mur
+        # si face a un mur
         if image[5][3][0] == 2:
             self.wall_front_of_agent = True
         else:
@@ -61,11 +61,13 @@ class State():
         if 2 in table:
             if np.where(table == 2)[0][0] < 3:
                 self.wall_left_of_agent = True
-                left_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+                left_distances.append(
+                    round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
             elif np.where(table == 2)[0][0] > 3:
                 self.wall_right_of_agent = True
-                right_distances.append(round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
-        
+                right_distances.append(
+                    round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+
         if len(left_distances) > 0:
             self.wall_left_distance = min(left_distances)
         else:
@@ -76,17 +78,17 @@ class State():
         else:
             self.wall_right_distance = 0
 
-        
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return (self.goal_visible == other.goal_visible and self.goal_direction == other.goal_direction and
-            self.wall_front_of_agent == other.wall_front_of_agent and self.wall_left_of_agent == other.wall_left_of_agent and
-            self.wall_right_of_agent == other.wall_right_of_agent and self.wall_left_distance == other.wall_left_distance and
-            self.wall_right_distance == other.wall_right_distance)
+                    self.wall_front_of_agent == other.wall_front_of_agent and self.wall_left_of_agent == other.wall_left_of_agent and
+                    self.wall_right_of_agent == other.wall_right_of_agent and self.wall_left_distance == other.wall_left_distance and
+                    self.wall_right_distance == other.wall_right_distance)
         return False
 
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
+
     def __str__(self):
         return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} / Wall left of agent : {self.wall_left_of_agent} / Wall right of agent : {self.wall_right_of_agent} \n Wall left distance : {self.wall_left_distance} / Wall right distance : {self.wall_right_distance}"
 
@@ -347,13 +349,13 @@ class AgentObsWrapper(ObservationWrapper):
         out = np.zeros((self.tile_size, self.tile_size, 2), dtype="uint8")
         # np zeros with tuple
 
-        for i in range(self.tile_size - 1 , -1 , -1):
-            for j in range(self.tile_size - 1 , -1 , -1):
+        for i in range(self.tile_size - 1, -1, -1):
+            for j in range(self.tile_size - 1, -1, -1):
                 if out[i, j, 0] == 0:
                     out[i, j, 0] = objects[i * self.tile_size + j]
                     if out[i, j, 0] == 2:
-                        for k in range(i-1,0,-1):
-                            out[k,j,0] = 1
+                        for k in range(i - 1, 0, -1):
+                            out[k, j, 0] = 1
                     out[i, j, 1] = get_state(grid.grid[i * self.tile_size + j])
 
         obs["image"] = out
@@ -383,7 +385,7 @@ class ObjectifWrapper(Wrapper):
                 else:
                     reward += 10
 
-                #en train de se manger un mur
+                # en train de se manger un mur
                 # if obs['image'][5][3][0] == 2:
                 #     reward -= 1
 
@@ -399,16 +401,25 @@ class ObjectifWrapper(Wrapper):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
                 door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
-                # print(f'dist{d}: {dist}, state: {door_state_str}')
-                if door_state_str != 'open':
-                    reward += 1 / dist
+                previous_door_opened = self.doors_opened
                 if action == Actions.toggle and (doors_pos[0][d], doors_pos[1][d]) == (5, 3):
                     match door_state_str:
                         case 'open':
                             self.doors_opened += 1
                         case 'closed':
                             self.doors_opened -= 1
-        reward += self.doors_opened
+                # si la porte est sur la même ligne que l'agent (3)
+                if doors_pos[1][d] == 3 and doors_pos[0][d] < 6:
+                    if door_state_str == 'open' and previous_door_opened < self.doors_opened:
+                        reward += 32 / dist
+                    elif door_state_str == 'closed':
+                        reward += 4 / dist
+                else:
+                    if door_state_str == 'open' and previous_door_opened < self.doors_opened:
+                        reward += 16 / dist
+                    elif door_state_str == 'closed':
+                        reward += 1 / dist
+        reward += (self.doors_opened * 1000)
         agent_x, agent_y = self.unwrapped.agent_pos
         if (agent_x, agent_y) in self.doors_pos and action != Actions.toggle:
             if self.doors_pos[(agent_x, agent_y)][0] == obs['direction']:
@@ -433,6 +444,7 @@ class ObjectifWrapper(Wrapper):
                 case 3:
                     if (agent_x, agent_y - 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
+
         if terminated:
             reward += 10
             self.doors_opened = 0
@@ -592,7 +604,7 @@ class DictObservationSpaceWrapper(ObservationWrapper):
         obs["mission"] = self.string_to_indices(obs["mission"])
         assert len(obs["mission"]) < self.max_words_in_mission
         obs["mission"] += [0] * \
-            (self.max_words_in_mission - len(obs["mission"]))
+                          (self.max_words_in_mission - len(obs["mission"]))
 
         return obs
 
@@ -630,7 +642,7 @@ class FlatObsWrapper(ObservationWrapper):
         # Cache the last-encoded mission string
         if mission != self.cachedStr:
             assert (
-                len(mission) <= self.maxStrLen
+                    len(mission) <= self.maxStrLen
             ), f"mission string too long ({len(mission)} chars)"
             mission = mission.lower()
 
@@ -800,25 +812,32 @@ class QLearningWrapper:
             self.q_table[next_state] = np.zeros(self.env.action_space.n)
         old_value = self.q_table[state][action]
         next_max = np.max(self.q_table[next_state])
-        new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (reward + self.discount_factor * next_max)
+        new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (
+                reward + self.discount_factor * next_max)
         self.q_table[state][action] = new_value
         # Si une porte fermée est devant l'agent, lui donner une récompense positive
         # Selon la position de l'agent, la porte peut-être à gauche ou à droite ou en haut ou en bas
+        neighbor_door = None
         match self.env.agent_dir:
             case 0:  # right
                 if self.env.grid.get(self.env.agent_pos[0] + 1, self.env.agent_pos[1]) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+                    neighbor_door = self.env.grid.get(self.env.agent_pos[0] + 1, self.env.agent_pos[1])
             case 1:  # down
                 if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] + 1) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+                    neighbor_door = self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] + 1)
             case 2:  # left
                 if self.env.grid.get(self.env.agent_pos[0] - 1, self.env.agent_pos[1]) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+                    neighbor_door = self.env.grid.get(self.env.agent_pos[0] - 1, self.env.agent_pos[1])
             case 3:  # up
                 if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
-
-
+                    neighbor_door = self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1)
+        if neighbor_door is not None:
+            if neighbor_door.is_open:
+                self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+                self.q_table[next_state][self.env.unwrapped.actions.toggle] -= 1
+            else:
+                self.q_table[next_state][self.env.unwrapped.actions.forward] -= 1
+                self.q_table[next_state][self.env.unwrapped.actions.toggle] += 1
 
     def train(self, num_episodes=1000):
         for episode in range(num_episodes):
@@ -837,7 +856,6 @@ class QLearningWrapper:
 
             # Diminuer le taux d'exploration après chaque épisode
             self.exploration_rate *= self.exploration_decay_rate
-
 
     def test(self, window, num_episodes=100):
         rewards = []
@@ -884,7 +902,7 @@ class RewardWrapper(Wrapper):
                 case 0:  # right
                     if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[0] - mission_pos[0]))
+                                  (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
@@ -893,31 +911,31 @@ class RewardWrapper(Wrapper):
                 case 1:  # down
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[1] - mission_pos[1]))
+                                  (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] < mission_pos[1]:
                             reward += 0.25 / \
-                                (abs(agent_pos[1] - mission_pos[1]))
+                                      (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
                         reward /= 2
                 case 2:  # left
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[0] - mission_pos[0]))
+                                  (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] > mission_pos[0]:
                             reward += 0.25 / \
-                                (abs(agent_pos[0] - mission_pos[0]))
+                                      (abs(agent_pos[0] - mission_pos[0]))
                     if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
                         reward /= 2
                 case 3:  # up
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[1] - mission_pos[1]))
+                                  (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] > mission_pos[1]:
                             reward += 0.25 / \
-                                (abs(agent_pos[1] - mission_pos[1]))
+                                      (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
                         reward /= 2
             if reward == 1:
