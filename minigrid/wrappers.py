@@ -23,7 +23,7 @@ DIRECTION_FOR_AGENT = {
 
 
 class State():
-    def __init__(self, image):
+    def __init__(self, image, previous_state=None, previous_action=None):
         self.goal_visible = False
         self.goal_direction = None
         self.wall_front_of_agent = False
@@ -32,6 +32,8 @@ class State():
         self.wall_left_distance = 0
         self.wall_right_distance = 0
         self.wall_front_distance = 0
+        self.previous_state = previous_state
+        self.previous_action = previous_action
         index = 0
         for table in image:
             if 8 in table:
@@ -50,31 +52,38 @@ class State():
                         self.goal_direction = DIRECTION_FOR_AGENT["topRight"]
             index += 1
 
-            visibility = 3
+            visibility = 7
 
             # Recherche des murs
-            for i in range(0, visibility):
+            for i in range(visibility):
                 if image[6 - i][3][0] == 2:
                     self.wall_front_of_agent = True
-                    self.wall_front_distance = visibility - i
+                    self.wall_front_distance = 6 + i - visibility
                     break
 
 
             left_distances = []
             right_distances = []
-            for i in range(0, visibility):
-                if 2 in image[6 - i]:
-                    if np.where(image[6 - i] == 2)[0][0] < 3:
-                        self.wall_left_of_agent = True
-                        left_distances.append(i + 1)
-                    elif np.where(image[6 - i] == 2)[0][0] > 3:
-                        self.wall_right_of_agent = True
-                        right_distances.append(i + 1)
+            table = image[6]
+            if 2 in table:
+                if np.where(table == 2)[0][0] < 3:
+                    self.wall_left_of_agent = True
+                    left_distances.append(
+                        round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+                elif np.where(table == 2)[0][0] > 3:
+                    self.wall_right_of_agent = True
+                    right_distances.append(
+                        round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
 
             if len(left_distances) > 0:
                 self.wall_left_distance = min(left_distances)
+            else:
+                self.wall_left_distance = 0
+
             if len(right_distances) > 0:
                 self.wall_right_distance = min(right_distances)
+            else:
+                self.wall_right_distance = 0
 
         
     def __eq__(self, other):
@@ -86,13 +95,14 @@ class State():
                     self.wall_right_of_agent == other.wall_right_of_agent and
                     self.wall_left_distance == other.wall_left_distance and
                     self.wall_right_distance == other.wall_right_distance and
-                    self.wall_front_distance == other.wall_front_distance)
+                    self.wall_front_distance == other.wall_front_distance and
+                    self.previous_state == other.previous_state)
         return False
 
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
     def __str__(self):
-        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_of_agent} \nWall left of agent : {self.wall_left_distance} / Wall right agent : {self.wall_right_distance}"
+        return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_distance} \nWall left of agent : {self.wall_left_distance} / Wall right agent : {self.wall_right_distance}"
 
 class ReseedWrapper(Wrapper):
     """
@@ -391,9 +401,10 @@ class ObjectifWrapper(Wrapper):
                 #     reward -= 1
 
                 print(State(obs["image"]))
+                print(reward)
 
                 if State(obs["image"]).goal_direction == 2:
-                    reward += 100
+                    reward += 20
 
                 print(f'dist_objectif = {dist}')
         if 4 in obs['image']:
@@ -437,7 +448,7 @@ class ObjectifWrapper(Wrapper):
                     if (agent_x, agent_y - 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
         if terminated:
-            reward += 10
+            reward += 100
             self.doors_opened = 0
 
         # print("reward: ", reward)
@@ -768,17 +779,16 @@ class SymbolicObsWrapper(ObservationWrapper):
 # Q - Table Rewards
 
 class QLearningWrapper:
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.99, exploration_rate=1.0, exploration_decay_rate=0.99):
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.99, exploration_rate=1.0):
         self.env = env
         self.q_table = {}
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.exploration_rate = exploration_rate
-        self.exploration_decay_rate = exploration_decay_rate
 
-    def get_state(self, observation):
+    def get_state(self, observation, previous_state=None, previous_action=None):
         image = observation['image']
-        return State(image)
+        return State(image,previous_state,previous_action)
 
     def redraw(self, window, img):
         window.show_img(img)
@@ -792,7 +802,15 @@ class QLearningWrapper:
             if state not in self.q_table:
                 # Si l'état n'a jamais été vu, initialiser les valeurs Q à 0 pour toutes les actions possibles
                 self.q_table[state] = np.zeros(self.env.action_space.n)
-            action = np.argmax(self.q_table[state])
+            q_values = self.q_table[state]
+            max_q = np.max(q_values)
+            if np.sum(q_values == max_q) > 1:
+                # Si plusieurs actions ont la même valeur Q max, choisir une action aléatoire parmi celles-ci
+                best_actions = np.argwhere(q_values == max_q).flatten()
+                action = np.random.choice(best_actions)
+            else:
+                # Sinon, choisir l'action avec la plus grande valeur Q
+                action = np.argmax(q_values)
         return action
 
     def update_q_table(self, state, action, reward, next_state):
@@ -807,19 +825,19 @@ class QLearningWrapper:
         self.q_table[state][action] = new_value
         # Si une porte fermée est devant l'agent, lui donner une récompense positive
         # Selon la position de l'agent, la porte peut-être à gauche ou à droite ou en haut ou en bas
-        match self.env.agent_dir:
-            case 0:  # right
-                if self.env.grid.get(self.env.agent_pos[0] + 1, self.env.agent_pos[1]) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
-            case 1:  # down
-                if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] + 1) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
-            case 2:  # left
-                if self.env.grid.get(self.env.agent_pos[0] - 1, self.env.agent_pos[1]) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
-            case 3:  # up
-                if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
-                    self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+        # match self.env.agent_dir:
+        #     case 0:  # right
+        #         if self.env.grid.get(self.env.agent_pos[0] + 1, self.env.agent_pos[1]) == Door:
+        #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+        #     case 1:  # down
+        #         if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] + 1) == Door:
+        #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+        #     case 2:  # left
+        #         if self.env.grid.get(self.env.agent_pos[0] - 1, self.env.agent_pos[1]) == Door:
+        #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
+        #     case 3:  # up
+        #         if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
+        #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
 
 
 
@@ -829,17 +847,19 @@ class QLearningWrapper:
             state = self.get_state(self.env.reset()[0])
             done = False
             truncated = False
+            previous_action = None
             while not done and not truncated:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
-                next_state = self.get_state(observation)
+                next_state = self.get_state(observation, previous_action=previous_action)
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
+                previous_action = action
 
-                print(f"Reward: {reward}")
+                #print(f"Reward: {reward}")
 
             # Diminuer le taux d'exploration après chaque épisode
-            self.exploration_rate *= self.exploration_decay_rate
+            self.exploration_rate -= self.exploration_rate / num_episodes
 
 
     def test(self, window, num_episodes=100):
@@ -849,12 +869,14 @@ class QLearningWrapper:
             done = False
             truncated = False
             total_reward = 0
+            previous_action = None
             while not done and not truncated:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
-                next_state = self.get_state(observation)
+                next_state = self.get_state(observation, previous_action=previous_action, )
                 state = next_state
                 total_reward += reward
+                previous_action = action
 
                 self.redraw(window, self.env.get_frame())
 

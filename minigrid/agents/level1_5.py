@@ -18,13 +18,14 @@ args = parser.parse_args()
 # Create the environment
 env = gym.make(args.env)
 env = AgentObsWrapper(env)
-env = ActionBonus(env)
+env = StateBonus(env)
+# env = ActionBonus(env)
 env = ObjectifWrapper(env)
 
 
 
 # Create the Q-learning wrapper
-ql_wrapper = QLearningWrapper(env)
+ql_wrapper = QLearningWrapper(env,0.4)
 
 # Train the agent
 
