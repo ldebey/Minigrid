@@ -23,7 +23,7 @@ DIRECTION_FOR_AGENT = {
 
 
 class State():
-    def __init__(self, image, previous_state=None, previous_action=None):
+    def __init__(self, image, previous_state=None, previous_action=None, terminated=False):
         self.goal_visible = False
         self.goal_direction = None
         self.wall_front_of_agent = False
@@ -34,6 +34,7 @@ class State():
         self.wall_front_distance = 0
         self.previous_state = previous_state
         self.previous_action = previous_action
+        self.terminated = terminated
         index = 0
         for table in image:
             if 8 in table:
@@ -61,29 +62,29 @@ class State():
                     self.wall_front_distance = 6 + i - visibility
                     break
 
+        left_distances = []
+        right_distances = []
+        table = image[6]
+        if 2 in table:
+            if np.where(table == 2)[0][0] < 3:
+                self.wall_left_of_agent = True
+                left_distances.append(2 - np.where(table == 2)[0][0])
+            elif np.where(table == 2)[0][0] > 3:
+                self.wall_right_of_agent = True
+                right_distances.append(np.where(table == 2)[0][0] - 4)
 
-            left_distances = []
-            right_distances = []
-            table = image[6]
-            if 2 in table:
-                if np.where(table == 2)[0][0] < 3:
-                    self.wall_left_of_agent = True
-                    left_distances.append(
-                        round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
-                elif np.where(table == 2)[0][0] > 3:
-                    self.wall_right_of_agent = True
-                    right_distances.append(
-                        round(math.dist((6, 3), (np.where(table == 2)[0][0], np.where(table == 2)[1][0]))))
+        if len(left_distances) > 0:
+            self.wall_left_distance = min(left_distances)
+        else:
+            self.wall_left_distance = 0
 
-            if len(left_distances) > 0:
-                self.wall_left_distance = min(left_distances)
-            else:
-                self.wall_left_distance = 0
+        if len(right_distances) > 0:
+            self.wall_right_distance = min(right_distances)
+        else:
+            self.wall_right_distance = 0
 
-            if len(right_distances) > 0:
-                self.wall_right_distance = min(right_distances)
-            else:
-                self.wall_right_distance = 0
+
+
 
         
     def __eq__(self, other):
@@ -96,7 +97,8 @@ class State():
                     self.wall_left_distance == other.wall_left_distance and
                     self.wall_right_distance == other.wall_right_distance and
                     self.wall_front_distance == other.wall_front_distance and
-                    self.previous_state == other.previous_state)
+                    self.previous_state == other.previous_state and
+                    self.terminated == other.terminated)
         return False
 
     def __hash__(self):
@@ -197,6 +199,7 @@ class StateBonus(Wrapper):
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
+        self.counts = {}
         return self.env.reset(**kwargs)
 
 
@@ -387,26 +390,25 @@ class ObjectifWrapper(Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        if 8 in obs['image']:
-            if not State(obs["image"]).wall_front_of_agent:
-                objectif_pos = np.where(obs['image'] == 8)
-                dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
-                if dist > 0:
-                    reward += 10 / dist
-                else:
-                    reward += 10
+        if State(obs["image"]).goal_visible:
+            objectif_pos = np.where(obs['image'] == 8)
+            dist = math.dist((6, 3), (objectif_pos[0][0], objectif_pos[1][0]))
+            if dist > 1:
+                reward += 5 / dist
+            else:
+                reward += 5
 
-                #en train de se manger un mur
-                # if obs['image'][5][3][0] == 2:
-                #     reward -= 1
+            #print(State(obs["image"]))
 
-                print(State(obs["image"]))
-                print(reward)
+            if State(obs["image"]).goal_direction == 2:
+                reward += 2
 
-                if State(obs["image"]).goal_direction == 2:
-                    reward += 20
+            #print(f'dist_objectif = {dist}')
 
-                print(f'dist_objectif = {dist}')
+        if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
+            if action == 2:
+                reward = 0
+
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
             for d in range(len(doors_pos[0])):
@@ -448,7 +450,7 @@ class ObjectifWrapper(Wrapper):
                     if (agent_x, agent_y - 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
         if terminated:
-            reward += 100
+            reward += 10
             self.doors_opened = 0
 
         # print("reward: ", reward)
@@ -786,9 +788,9 @@ class QLearningWrapper:
         self.discount_factor = discount_factor
         self.exploration_rate = exploration_rate
 
-    def get_state(self, observation, previous_state=None, previous_action=None):
+    def get_state(self, observation, previous_state=None, previous_action=None, terminated=False):
         image = observation['image']
-        return State(image,previous_state,previous_action)
+        return State(image,previous_state,previous_action,terminated)
 
     def redraw(self, window, img):
         window.show_img(img)
@@ -851,7 +853,12 @@ class QLearningWrapper:
             while not done and not truncated:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
-                next_state = self.get_state(observation, previous_action=previous_action)
+                next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
+
+                if previous_action is not None:
+                    if action > 2 and previous_action > 2:
+                        reward = 0
+
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
                 previous_action = action
@@ -873,7 +880,14 @@ class QLearningWrapper:
             while not done and not truncated:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
-                next_state = self.get_state(observation, previous_action=previous_action, )
+                next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
+
+                if previous_action is not None:
+                    if action > 2 and previous_action > 2:
+                        reward = 0
+
+                print(f"Reward: {reward}")
+
                 state = next_state
                 total_reward += reward
                 previous_action = action
