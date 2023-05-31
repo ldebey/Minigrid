@@ -11,7 +11,7 @@ matplotlib.use('TkAgg')
 
 # Create the environment
 parser = ArgumentParser()
-parser.add_argument("--env", help="gym environment to load", default="MiniGrid-FourRooms-v0")
+parser.add_argument("--env", help="gym environment to load", default="MiniGrid-Empty-8x8-v0")
 parser.add_argument("--train", help="number of episode during training", default=500)
 parser.add_argument("--test", help="number of episode during testing", default=10)
 args = parser.parse_args()
@@ -20,13 +20,14 @@ args = parser.parse_args()
 env = gym.make(args.env)
 env = ReseedWrapper(env, seeds=[datetime.now().second])
 env = AgentObsWrapper(env)
-env = ActionBonus(env)
+env = StateBonus(env)
+# env = ActionBonus(env)
 env = ObjectifWrapper(env)
 
 
 
 # Create the Q-learning wrapper
-ql_wrapper = QLearningWrapper(env)
+ql_wrapper = QLearningWrapper(env,0.4)
 
 # Train the agent
 
