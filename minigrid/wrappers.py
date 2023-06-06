@@ -83,10 +83,6 @@ class State():
         else:
             self.wall_right_distance = 0
 
-
-
-
-        
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return (self.goal_visible == other.goal_visible and
@@ -103,8 +99,10 @@ class State():
 
     def __hash__(self):
         return hash(tuple(sorted(self.__dict__.items())))
+
     def __str__(self):
         return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_distance} \nWall left of agent : {self.wall_left_distance} / Wall right agent : {self.wall_right_distance}"
+
 
 class ReseedWrapper(Wrapper):
     """
@@ -363,13 +361,13 @@ class AgentObsWrapper(ObservationWrapper):
         out = np.zeros((self.tile_size, self.tile_size, 2), dtype="uint8")
         # np zeros with tuple
 
-        for i in range(self.tile_size - 1 , -1 , -1):
-            for j in range(self.tile_size - 1 , -1 , -1):
+        for i in range(self.tile_size - 1, -1, -1):
+            for j in range(self.tile_size - 1, -1, -1):
                 if out[i, j, 0] == 0:
                     out[i, j, 0] = objects[i * self.tile_size + j]
                     if out[i, j, 0] == 2:
-                        for k in range(i-1,0,-1):
-                            out[k,j,0] = 1
+                        for k in range(i - 1, 0, -1):
+                            out[k, j, 0] = 1
                     out[i, j, 1] = get_state(grid.grid[i * self.tile_size + j])
 
         obs["image"] = out
@@ -398,15 +396,16 @@ class ObjectifWrapper(Wrapper):
             else:
                 reward += 5
 
-            #print(State(obs["image"]))
+            # print(State(obs["image"]))
 
             if State(obs["image"]).goal_direction == 2:
                 reward += 2
 
-            #print(f'dist_objectif = {dist}')
+            # print(f'dist_objectif = {dist}')
 
-        if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
-            reward += -1
+        if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(
+                obs["image"]).goal_direction == 2:
+            reward -= 1
 
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
@@ -414,16 +413,25 @@ class ObjectifWrapper(Wrapper):
                 dist = math.dist((6, 3), (doors_pos[0][d], doors_pos[1][d]))
                 door_state = obs["image"][doors_pos[0][d]][doors_pos[1][d]][1]
                 door_state_str = [k for k, v in STATE_TO_IDX.items() if v == door_state][0]
-                # print(f'dist{d}: {dist}, state: {door_state_str}')
-                if door_state_str != 'open':
-                    reward += 1 / dist
+                previous_door_opened = self.doors_opened
                 if action == Actions.toggle and (doors_pos[0][d], doors_pos[1][d]) == (5, 3):
                     match door_state_str:
                         case 'open':
                             self.doors_opened += 1
                         case 'closed':
                             self.doors_opened -= 1
-        reward += self.doors_opened
+                # si la porte est sur la même ligne que l'agent (3)
+                if doors_pos[1][d] == 3 and doors_pos[0][d] < 6:
+                    if door_state_str == 'open' and previous_door_opened < self.doors_opened:
+                        reward += 32 / dist
+                    elif door_state_str == 'closed':
+                        reward += 4 / dist
+                else:
+                    if door_state_str == 'open' and previous_door_opened < self.doors_opened:
+                        reward += 16 / dist
+                    elif door_state_str == 'closed':
+                        reward += 1 / dist
+        reward += (self.doors_opened * 1000)
         agent_x, agent_y = self.unwrapped.agent_pos
         if (agent_x, agent_y) in self.doors_pos and action != Actions.toggle:
             if self.doors_pos[(agent_x, agent_y)][0] == obs['direction']:
@@ -608,7 +616,7 @@ class DictObservationSpaceWrapper(ObservationWrapper):
         obs["mission"] = self.string_to_indices(obs["mission"])
         assert len(obs["mission"]) < self.max_words_in_mission
         obs["mission"] += [0] * \
-            (self.max_words_in_mission - len(obs["mission"]))
+                          (self.max_words_in_mission - len(obs["mission"]))
 
         return obs
 
@@ -646,7 +654,7 @@ class FlatObsWrapper(ObservationWrapper):
         # Cache the last-encoded mission string
         if mission != self.cachedStr:
             assert (
-                len(mission) <= self.maxStrLen
+                    len(mission) <= self.maxStrLen
             ), f"mission string too long ({len(mission)} chars)"
             mission = mission.lower()
 
@@ -790,13 +798,13 @@ class QLearningWrapper:
 
     def get_state(self, observation, previous_state=None, previous_action=None, terminated=False):
         image = observation['image']
-        return State(image,previous_state,previous_action,terminated)
+        return State(image, previous_state, previous_action, terminated)
 
     def redraw(self, window, img):
         window.show_img(img)
 
     def get_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate :
+        if random.uniform(0, 1) < self.exploration_rate:
             # Exploration : choisir une action aléatoire
             action = self.env.action_space.sample()
         else:
@@ -828,7 +836,8 @@ class QLearningWrapper:
             self.q_table[next_state] = np.zeros(self.env.action_space.n)
         old_value = self.q_table[state][action]
         next_max = np.max(self.q_table[next_state])
-        new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (reward + self.discount_factor * next_max)
+        new_value = (1 - self.learning_rate) * old_value + self.learning_rate * (
+                reward + self.discount_factor * next_max)
         self.q_table[state][action] = new_value
         # Si une porte fermée est devant l'agent, lui donner une récompense positive
         # Selon la position de l'agent, la porte peut-être à gauche ou à droite ou en haut ou en bas
@@ -846,8 +855,6 @@ class QLearningWrapper:
         #         if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
         #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
 
-
-
     def train(self, num_episodes=1000):
         for episode in range(num_episodes):
             print(f"Episode {episode}")
@@ -864,11 +871,10 @@ class QLearningWrapper:
                 state = next_state
                 previous_action = action
 
-                #print(f"Reward: {reward}")
+                # print(f"Reward: {reward}")
 
             # Diminuer le taux d'exploration après chaque épisode
             self.exploration_rate -= self.exploration_rate / num_episodes
-
 
     def test(self, window, num_episodes=100):
         rewards = []
@@ -926,7 +932,7 @@ class RewardWrapper(Wrapper):
                 case 0:  # right
                     if agent_pos[0] < mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[0] - mission_pos[0]))
+                                  (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] < mission_pos[0]:
                             reward += 0.25
@@ -935,31 +941,31 @@ class RewardWrapper(Wrapper):
                 case 1:  # down
                     if agent_pos[1] < mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[1] - mission_pos[1]))
+                                  (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] < mission_pos[1]:
                             reward += 0.25 / \
-                                (abs(agent_pos[1] - mission_pos[1]))
+                                      (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] + 1] == 2:
                         reward /= 2
                 case 2:  # left
                     if agent_pos[0] > mission_pos[0] and agent_pos[1] == mission_pos[1]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[0] - mission_pos[0]))
+                                  (abs(agent_pos[0] - mission_pos[0]))
                     else:
                         if agent_pos[0] > mission_pos[0]:
                             reward += 0.25 / \
-                                (abs(agent_pos[0] - mission_pos[0]))
+                                      (abs(agent_pos[0] - mission_pos[0]))
                     if image_object[agent_pos[0] - 1][agent_pos[1]] == 2:
                         reward /= 2
                 case 3:  # up
                     if agent_pos[1] > mission_pos[1] and agent_pos[0] == mission_pos[0]:
                         reward += 0.25 + 0.25 / \
-                            (abs(agent_pos[1] - mission_pos[1]))
+                                  (abs(agent_pos[1] - mission_pos[1]))
                     else:
                         if agent_pos[1] > mission_pos[1]:
                             reward += 0.25 / \
-                                (abs(agent_pos[1] - mission_pos[1]))
+                                      (abs(agent_pos[1] - mission_pos[1]))
                     if image_object[agent_pos[0]][agent_pos[1] - 1] == 2:
                         reward /= 2
             if reward == 1:
@@ -970,3 +976,67 @@ class RewardWrapper(Wrapper):
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
+
+
+class HistoryWrapper(Wrapper):
+    """
+    Adds the history of the agent's position to the observation.
+    For calculating position based from the agent's starting position.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.action_history = []
+        self.cases_explored = []
+        self.orignal_direction = None
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        # On garde en mémoire la direction initiale de l'agent
+        if self.orignal_direction is None:
+            self.orignal_direction = obs["direction"]
+        self.action_history.append(action)
+        pos = self.calculer_position()
+        #print(f"Position: {pos}")
+        if pos in self.cases_explored:
+            reward -= 1
+        else:
+            reward += 1
+            self.cases_explored.append(pos)
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        self.action_history = []
+        self.cases_explored = []
+        self.orignal_direction = None
+        return self.env.reset(**kwargs)
+
+    def calculer_position(self):
+        x, y = (0, 0)
+        # 0: Up, 1: Right, 2: Down, 3: Left
+        direction = None
+        match self.orignal_direction:
+            case 0:  # right
+                direction = 1
+            case 1:  # down
+                direction = 2
+            case 2:  # left
+                direction = 3
+            case 3:  # up
+                direction = 0
+        for action in self.action_history:
+            if action == 2:  # avancer (forward)
+                if direction == 0:
+                    y += 1
+                elif direction == 1:
+                    x += 1
+                elif direction == 2:
+                    y -= 1
+                else:
+                    x -= 1
+            elif action == 1:  # gauche (left)
+                direction = (direction - 1) % 4
+            elif action == 1:  # droite (right)
+                direction = (direction + 1) % 4
+
+        return x, y

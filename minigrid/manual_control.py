@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, AgentObsWrapper, ObjectifWrapper, State
+from minigrid.wrappers import ImgObsWrapper, RGBImgPartialObsWrapper, DictObservationSpaceWrapper, AgentObsWrapper, \
+    ObjectifWrapper, State, HistoryWrapper
 from minigrid.utils.window import Window
 import gymnasium as gym
 import matplotlib
@@ -125,6 +126,7 @@ if __name__ == "__main__":
     if args.agent_view:
         env = RGBImgPartialObsWrapper(env)
         env = ImgObsWrapper(env)
+    env = HistoryWrapper(env)
 
     window = Window("minigrid - " + args.env)
     window.reg_key_handler(lambda event: key_handler(env, window, event))

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+from datetime import datetime
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus, ReseedWrapper
+from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus, \
+    ReseedWrapper, HistoryWrapper
 import gymnasium as gym
 import matplotlib
 
@@ -17,17 +19,17 @@ args = parser.parse_args()
 
 # Create the environment
 env = gym.make(args.env)
-env = ReseedWrapper(env)
+# env = ReseedWrapper(env, seeds=[datetime.now().second])
 env = AgentObsWrapper(env)
 # env = StateBonus(env)
 # env = ActionBonus(env)
+env = HistoryWrapper(env)
 env = ObjectifWrapper(env)
 
 
 
-
 # Create the Q-learning wrapper
-ql_wrapper = QLearningWrapper(env,0.3,0.8)
+ql_wrapper = QLearningWrapper(env,0.4)
 
 # Train the agent
 
