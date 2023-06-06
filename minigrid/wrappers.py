@@ -997,13 +997,19 @@ class HistoryWrapper(Wrapper):
             self.orignal_direction = obs["direction"]
         self.action_history.append(action)
         pos = self.calculer_position()
-        print(f"Position: {pos}")
+        #print(f"Position: {pos}")
         if pos in self.cases_explored:
             reward -= 1
         else:
             reward += 1
             self.cases_explored.append(pos)
         return obs, reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        self.action_history = []
+        self.cases_explored = []
+        self.orignal_direction = None
+        return self.env.reset(**kwargs)
 
     def calculer_position(self):
         x, y = (0, 0)
