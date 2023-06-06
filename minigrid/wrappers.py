@@ -407,8 +407,8 @@ class ObjectifWrapper(Wrapper):
             #print(f'dist_objectif = {dist}')
 
         if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
-            if action == 2:
-                reward = 0
+
+            reward = -1
 
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
@@ -807,7 +807,7 @@ class QLearningWrapper:
         window.show_img(img)
 
     def get_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate:
+        if random.uniform(0, 1) < self.exploration_rate :
             # Exploration : choisir une action aléatoire
             action = self.env.action_space.sample()
         else:
@@ -824,6 +824,11 @@ class QLearningWrapper:
             else:
                 # Sinon, choisir l'action avec la plus grande valeur Q
                 action = np.argmax(q_values)
+
+        if state.previous_action is not None:
+            if action > 2 and state.previous_action > 2:
+                return self.get_action(state)
+
         return action
 
     def update_q_table(self, state, action, reward, next_state):
@@ -867,10 +872,6 @@ class QLearningWrapper:
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 
-                if previous_action is not None:
-                    if action > 2 and previous_action > 2:
-                        reward = 0
-
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
                 previous_action = action
@@ -888,14 +889,16 @@ class QLearningWrapper:
             truncated = False
             total_reward = 0
             previous_action = None
+
+            if not state.goal_visible:
+                self.exploration_rate = 0.4
+            else:
+                self.exploration_rate = 0
+
             while not done and not truncated:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
-
-                if previous_action is not None:
-                    if action > 2 and previous_action > 2:
-                        reward = 0
 
                 print(f"Reward: {reward}")
 
