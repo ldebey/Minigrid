@@ -2,7 +2,7 @@
 from argparse import ArgumentParser
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus
+from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus, ReseedWrapper
 import gymnasium as gym
 import matplotlib
 
@@ -10,13 +10,14 @@ matplotlib.use('TkAgg')
 
 # Create the environment
 parser = ArgumentParser()
-parser.add_argument("--env", help="gym environment to load", default="MiniGrid-Empty-8x8-v0")
+parser.add_argument("--env", help="gym environment to load", default="MiniGrid-FourRooms-v0")
 parser.add_argument("--train", help="number of episode during training", default=500)
 parser.add_argument("--test", help="number of episode during testing", default=10)
 args = parser.parse_args()
 
 # Create the environment
 env = gym.make(args.env)
+env = ReseedWrapper(env)
 env = AgentObsWrapper(env)
 # env = StateBonus(env)
 # env = ActionBonus(env)
@@ -24,8 +25,9 @@ env = ObjectifWrapper(env)
 
 
 
+
 # Create the Q-learning wrapper
-ql_wrapper = QLearningWrapper(env,0.4)
+ql_wrapper = QLearningWrapper(env,0.3,0.8)
 
 # Train the agent
 

@@ -406,8 +406,7 @@ class ObjectifWrapper(Wrapper):
             #print(f'dist_objectif = {dist}')
 
         if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
-
-            reward = -1
+            reward += -1
 
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
@@ -449,6 +448,7 @@ class ObjectifWrapper(Wrapper):
                 case 3:
                     if (agent_x, agent_y - 1) not in self.doors_pos:
                         self.doors_pos[(agent_x, agent_y - 1)] = (3, 1)
+
         if terminated:
             reward += 10
             self.doors_opened = 0

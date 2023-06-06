@@ -36,6 +36,8 @@ def step(env, window, action):
     # print(f"obs : image={obs['image']}, direction={obs['direction']},mission={obs['mission']}")
 
     print(State(obs["image"]))
+    print('-'*20)
+    print(f"Reward : {reward}")
 
     if terminated:
         print("terminated!")
