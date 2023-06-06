@@ -3,7 +3,8 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 from minigrid.utils.window import Window
-from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus, ReseedWrapper
+from minigrid.wrappers import QLearningWrapper, AgentObsWrapper, ObjectifWrapper, ActionBonus, StateBonus, \
+    ReseedWrapper, HistoryWrapper
 import gymnasium as gym
 import matplotlib
 
@@ -23,7 +24,7 @@ env = AgentObsWrapper(env)
 # env = StateBonus(env)
 # env = ActionBonus(env)
 env = ObjectifWrapper(env)
-
+env = HistoryWrapper(env)
 
 
 # Create the Q-learning wrapper

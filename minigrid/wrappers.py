@@ -83,10 +83,6 @@ class State():
         else:
             self.wall_right_distance = 0
 
-
-
-
-
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return (self.goal_visible == other.goal_visible and
@@ -106,6 +102,7 @@ class State():
 
     def __str__(self):
         return f"Is goal visible : {self.goal_visible} / Direction : {self.goal_direction} \nWall front of agent : {self.wall_front_distance} \nWall left of agent : {self.wall_left_distance} / Wall right agent : {self.wall_right_distance}"
+
 
 class ReseedWrapper(Wrapper):
     """
@@ -399,15 +396,15 @@ class ObjectifWrapper(Wrapper):
             else:
                 reward += 5
 
-            #print(State(obs["image"]))
+            # print(State(obs["image"]))
 
             if State(obs["image"]).goal_direction == 2:
                 reward += 2
 
-            #print(f'dist_objectif = {dist}')
+            # print(f'dist_objectif = {dist}')
 
-        if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
-
+        if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(
+                obs["image"]).goal_direction == 2:
             reward = -1
 
         if 4 in obs['image']:
@@ -801,13 +798,13 @@ class QLearningWrapper:
 
     def get_state(self, observation, previous_state=None, previous_action=None, terminated=False):
         image = observation['image']
-        return State(image,previous_state,previous_action,terminated)
+        return State(image, previous_state, previous_action, terminated)
 
     def redraw(self, window, img):
         window.show_img(img)
 
     def get_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate :
+        if random.uniform(0, 1) < self.exploration_rate:
             # Exploration : choisir une action aléatoire
             action = self.env.action_space.sample()
         else:
@@ -858,8 +855,6 @@ class QLearningWrapper:
         #         if self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1] - 1) == Door:
         #             self.q_table[next_state][self.env.unwrapped.actions.forward] += 1
 
-
-
     def train(self, num_episodes=1000):
         for episode in range(num_episodes):
             print(f"Episode {episode}")
@@ -876,7 +871,7 @@ class QLearningWrapper:
                 state = next_state
                 previous_action = action
 
-                #print(f"Reward: {reward}")
+                # print(f"Reward: {reward}")
 
             # Diminuer le taux d'exploration après chaque épisode
             self.exploration_rate -= self.exploration_rate / num_episodes
@@ -981,3 +976,61 @@ class RewardWrapper(Wrapper):
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
+
+
+class HistoryWrapper(Wrapper):
+    """
+    Adds the history of the agent's position to the observation.
+    For calculating position based from the agent's starting position.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.action_history = []
+        self.cases_explored = []
+        self.orignal_direction = None
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        # On garde en mémoire la direction initiale de l'agent
+        if self.orignal_direction is None:
+            self.orignal_direction = obs["direction"]
+        self.action_history.append(action)
+        pos = self.calculer_position()
+        print(f"Position: {pos}")
+        if pos in self.cases_explored:
+            reward -= 1
+        else:
+            reward += 1
+            self.cases_explored.append(pos)
+        return obs, reward, terminated, truncated, info
+
+    def calculer_position(self):
+        x, y = (0, 0)
+        # 0: Up, 1: Right, 2: Down, 3: Left
+        direction = None
+        match self.orignal_direction:
+            case 0:  # right
+                direction = 1
+            case 1:  # down
+                direction = 2
+            case 2:  # left
+                direction = 3
+            case 3:  # up
+                direction = 0
+        for action in self.action_history:
+            if action == 2:  # avancer (forward)
+                if direction == 0:
+                    y += 1
+                elif direction == 1:
+                    x += 1
+                elif direction == 2:
+                    y -= 1
+                else:
+                    x -= 1
+            elif action == 1:  # gauche (left)
+                direction = (direction - 1) % 4
+            elif action == 1:  # droite (right)
+                direction = (direction + 1) % 4
+
+        return x, y
