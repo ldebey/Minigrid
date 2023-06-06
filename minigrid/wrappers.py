@@ -795,8 +795,8 @@ class QLearningWrapper:
     def redraw(self, window, img):
         window.show_img(img)
 
-    def get_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate:
+    def get_action(self, state, afterTrain):
+        if random.uniform(0, 1) < self.exploration_rate and (not state.goal_visible and afterTrain):
             # Exploration : choisir une action aléatoire
             action = self.env.action_space.sample()
         else:
@@ -851,7 +851,7 @@ class QLearningWrapper:
             truncated = False
             previous_action = None
             while not done and not truncated:
-                action = self.get_action(state)
+                action = self.get_action(state,False)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 
@@ -878,7 +878,7 @@ class QLearningWrapper:
             total_reward = 0
             previous_action = None
             while not done and not truncated:
-                action = self.get_action(state)
+                action = self.get_action(state,True)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 

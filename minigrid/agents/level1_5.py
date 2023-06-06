@@ -18,7 +18,7 @@ args = parser.parse_args()
 # Create the environment
 env = gym.make(args.env)
 env = AgentObsWrapper(env)
-env = StateBonus(env)
+# env = StateBonus(env)
 # env = ActionBonus(env)
 env = ObjectifWrapper(env)
 
@@ -31,6 +31,8 @@ ql_wrapper = QLearningWrapper(env,0.4)
 
 window = Window("Level 1.5")
 ql_wrapper.train(num_episodes=int(args.train))
+
+print(f"Size of QTable :  {len(ql_wrapper.q_table)}")
 
 # Test the agent
 ql_wrapper.test(num_episodes=int(args.test), window=window)
