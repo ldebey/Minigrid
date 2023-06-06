@@ -813,6 +813,11 @@ class QLearningWrapper:
             else:
                 # Sinon, choisir l'action avec la plus grande valeur Q
                 action = np.argmax(q_values)
+
+        if state.previous_action is not None:
+            if action > 2 and state.previous_action > 2:
+                return self.get_action(state)
+
         return action
 
     def update_q_table(self, state, action, reward, next_state):
@@ -855,10 +860,6 @@ class QLearningWrapper:
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 
-                if previous_action is not None:
-                    if action > 2 and previous_action > 2:
-                        reward = 0
-
                 self.update_q_table(state, action, reward, next_state)
                 state = next_state
                 previous_action = action
@@ -887,10 +888,6 @@ class QLearningWrapper:
                 action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
-
-                if previous_action is not None:
-                    if action > 2 and previous_action > 2:
-                        reward = 0
 
                 print(f"Reward: {reward}")
 
