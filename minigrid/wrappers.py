@@ -406,8 +406,8 @@ class ObjectifWrapper(Wrapper):
             #print(f'dist_objectif = {dist}')
 
         if State(obs["image"]).wall_front_of_agent and State(obs["image"]).wall_front_distance <= 1 and not State(obs["image"]).goal_direction == 2:
-            if action == 2:
-                reward = 0
+
+            reward = -1
 
         if 4 in obs['image']:
             doors_pos = np.where(obs['image'] == 4)
@@ -795,8 +795,8 @@ class QLearningWrapper:
     def redraw(self, window, img):
         window.show_img(img)
 
-    def get_action(self, state, afterTrain):
-        if random.uniform(0, 1) < self.exploration_rate and (not state.goal_visible and afterTrain):
+    def get_action(self, state):
+        if random.uniform(0, 1) < self.exploration_rate :
             # Exploration : choisir une action aléatoire
             action = self.env.action_space.sample()
         else:
@@ -851,7 +851,7 @@ class QLearningWrapper:
             truncated = False
             previous_action = None
             while not done and not truncated:
-                action = self.get_action(state,False)
+                action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 
@@ -877,8 +877,14 @@ class QLearningWrapper:
             truncated = False
             total_reward = 0
             previous_action = None
+
+            if not state.goal_visible:
+                self.exploration_rate = 0.4
+            else:
+                self.exploration_rate = 0
+
             while not done and not truncated:
-                action = self.get_action(state,True)
+                action = self.get_action(state)
                 observation, reward, done, truncated, _ = self.env.step(action)
                 next_state = self.get_state(observation, previous_action=previous_action, terminated=done)
 
